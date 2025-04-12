@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alphanumeric Weaver</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        #controls {
+            margin-bottom: 20px;
+            background-color: #fff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px; /* Spacing between elements */
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+        }
+        #controls label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        #textInput {
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1em;
+            flex-grow: 1; /* Take available space */
+            min-width: 200px;
+        }
+        #weaveButton {
+            padding: 8px 15px;
+            font-size: 1em;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #weaveButton:hover {
+            background-color: #0056b3;
+        }
+        #patternCanvas {
+            border: 1px solid #ccc;
+            background-color: #fff; /* White canvas background */
+            display: block; /* Prevent extra space below */
+            max-width: 100%; /* Ensure it scales down */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .info {
+            text-align: center;
+            max-width: 600px;
+            margin-bottom: 15px;
+            color: #555;
+            font-size: 0.9em;
+        }
+         @media (max-width: 500px) {
+             #controls {
+                 flex-direction: column;
+                 align-items: stretch;
+             }
+             #textInput {
+                 min-width: unset;
+                 width: 100%;
+                 box-sizing: border-box; /* Include padding in width */
+             }
+             #weaveButton {
+                 width: 100%;
+             }
+         }
+    </style>
+</head>
+<body>
+
+    <h1>Alphanumeric Weaver</h1>
+    <div class="info">
+        Enter any text (letters, numbers, symbols) to deterministically generate a unique, static, tileable pattern based on its structure. The same input always produces the same pattern.
+    </div>
+
+    <div id="controls">
+        <label for="textInput">Input Text:</label>
+        <input type="text" id="textInput" value="PatternExample123!">
+        <button id="weaveButton">Weave Pattern</button>
+    </div>
+
+    <canvas id="patternCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('patternCanvas');
+        const ctx = canvas.getContext('2d');
+        const textInput = document.getElementById('textInput');
+        const weaveButton = document.getElementById('weaveButton');
+
+        // --- Pseudo-Random Number Generator (PRNG) ---
+        // Simple Mulberry32 implementation for deterministic results based on seed
+        function mulberry32(seed) {
+            return function() {
+                var t = seed += 0x6D2B79F5;
+                t = Math.imul(t ^ t >>> 15, t | 1);
+                t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+        }
+
+        // --- String Hashing (Simple) ---
+        function simpleHash(str) {
+            let hash = 0;
+            if (str.length === 0) return hash;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return Math.abs(hash); // Use absolute value for seeding
+        }
+
+        // --- Pattern Generation Parameters ---
+        function deriveParameters(str) {
+            const seed = simpleHash(str);
+            const random = mulberry32(seed); // Initialize PRNG with seed
+
+            const params = {};
+
+            // 1. Palette Selection
+            const palettes = [
+                // Palette definitions (array of hex color strings)
+                ['#264653', '#2a9d8f', '#e9c46a', '#f4a261', '#e76f51'], // Earthy
+                ['#03071e', '#370617', '#6a040f', '#9d0208', '#d00000'], // Deep Reds
+                ['#e0fbfc', '#98c1d9', '#3d5a80', '#293241', '#ee6c4d'], // Cool Blues + Coral
+                ['#1d3557', '#457b9d', '#a8dadc', '#f1faee', '#e63946'], // Maritime
+                ['#000000', '#444444', '#888888', '#cccccc', '#ffffff'], // Greyscale
+                ['#6a1b9a', '#ab47bc', '#ce93d8', '#f3e5f5', '#7b1fa2'], // Purples
+            ];
+            params.palette = palettes[Math.floor(random() * palettes.length)];
+            params.background = params.palette[Math.floor(random() * params.palette.length)]; // Pick one for bg
+            params.foreground = params.palette.filter(c => c !== params.background); // Use the rest
+
+            // 2. Tile Size (smaller for longer strings?)
+            const baseTileSize = 20 + Math.floor(random() * 31); // 20 to 50
+            params.tileSize = Math.max(10, Math.min(60, baseTileSize - Math.floor(str.length / 3))); // Adjust by length slightly
+
+            // 3. Density Factor (influences how many elements per tile)
+            params.density = 0.3 + random() * 0.7; // 0.3 to 1.0
+
+            // 4. Basic Weave Type Selection
+            params.weaveType = Math.floor(random() * 3); // Selects one of the drawTile functions
+
+            // 5. Structural Features (example: ratio affects something)
+            let numCount = (str.match(/\d/g) || []).length;
+            let letterCount = (str.match(/[a-zA-Z]/g) || []).length;
+            let symbolCount = str.length - numCount - letterCount;
+            params.numRatio = str.length > 0 ? numCount / str.length : 0;
+            params.letterRatio = str.length > 0 ? letterCount / str.length : 0;
+            // This ratio could influence stroke weight, element shapes, etc. (simplified here)
+            params.lineWeight = 1 + Math.floor(random() * 3) + Math.floor(params.numRatio * 3); // Thicker lines if more numbers?
+
+             // More granular PRNG use based on string chars
+            params.charInfluences = [];
+            for(let i=0; i < str.length; i++){
+                // Derive a "random-like" value per character - simple approach
+                params.charInfluences.push(str.charCodeAt(i) / 255.0);
+            }
+             // Pad if string is short, truncate if long for drawing loop consistency
+            while(params.charInfluences.length < 16) params.charInfluences.push(random());
+            params.charInfluences = params.charInfluences.slice(0, params.tileSize * params.tileSize); // Rough upper bound
+
+
+            return params;
+        }
+
+        // --- Drawing Functions (Different "Weaves") ---
+
+        function drawTile_Type0(x, y, size, params, charIndex) { // Lines based on char code
+            const random = mulberry32(simpleHash(params.originalString + x + y)); // Seed locally for variation per tile if needed
+            const charInfluence = params.charInfluences[charIndex % params.charInfluences.length] || random(); // Get influence or default random
+
+            ctx.strokeStyle = params.foreground[charIndex % params.foreground.length];
+            ctx.lineWidth = params.lineWeight * (0.5 + charInfluence); // Line weight influenced
+            ctx.beginPath();
+            ctx.moveTo(x + size * charInfluence, y); // Start influenced by char
+            ctx.lineTo(x + size * (1 - charInfluence), y + size); // End influenced differently
+            ctx.stroke();
+
+            ctx.beginPath();
+             ctx.moveTo(x, y + size * (1 - charInfluence)); // Other direction
+            ctx.lineTo(x + size, y + size * charInfluence);
+            ctx.stroke();
+        }
+
+        function drawTile_Type1(x, y, size, params, charIndex) { // Rectangles/Squares
+             const random = mulberry32(simpleHash(params.originalString + x + y));
+            const charInfluence = params.charInfluences[charIndex % params.charInfluences.length] || random();
+
+            if (charInfluence > (1 - params.density) * 0.7) { // Density check, modified by char influence
+                 ctx.fillStyle = params.foreground[charIndex % params.foreground.length];
+                 let innerSize = size * (0.2 + charInfluence * 0.7) * params.density; // Size influenced by char
+                 let offsetX = (size - innerSize) / 2;
+                 let offsetY = (size - innerSize) / 2;
+                 ctx.fillRect(x + offsetX, y + offsetY, innerSize, innerSize);
+            }
+        }
+
+        function drawTile_Type2(x, y, size, params, charIndex) { // Circles
+             const random = mulberry32(simpleHash(params.originalString + x + y));
+             const charInfluence = params.charInfluences[charIndex % params.charInfluences.length] || random();
+
+            if (charInfluence > (1 - params.density)) { // Use density threshold
+                 ctx.fillStyle = params.foreground[charIndex % params.foreground.length];
+                 let radius = size * 0.5 * (0.3 + charInfluence * 0.7) * params.density; // Radius influenced by char
+                 ctx.beginPath();
+                 ctx.arc(x + size / 2, y + size / 2, Math.max(1, radius), 0, Math.PI * 2);
+                 ctx.fill();
+            }
+        }
+
+        // --- Main Weave Function ---
+        function weavePattern(str) {
+            if (!str || str.trim().length === 0) {
+                ctx.fillStyle = '#dddddd'; // Default empty background
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#555';
+                ctx.font = "16px sans-serif";
+                 ctx.textAlign = "center";
+                ctx.fillText("Enter some text above.", canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            const params = deriveParameters(str);
+             params.originalString = str; // Store original string for potential later use if needed
+
+            // Set canvas size (can be fixed or responsive)
+            const displaySize = Math.min(window.innerWidth * 0.9, 500);
+            canvas.width = displaySize;
+            canvas.height = displaySize;
+
+            // Fill background
+            ctx.fillStyle = params.background;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const tileSize = params.tileSize;
+            let charCounter = 0;
+
+            // Loop through grid and draw tiles
+            for (let y = 0; y < canvas.height; y += tileSize) {
+                for (let x = 0; x < canvas.width; x += tileSize) {
+
+                    // Choose the drawing function based on parameters
+                    switch (params.weaveType) {
+                        case 0:
+                            drawTile_Type0(x, y, tileSize, params, charCounter);
+                            break;
+                        case 1:
+                             drawTile_Type1(x, y, tileSize, params, charCounter);
+                            break;
+                        case 2:
+                            drawTile_Type2(x, y, tileSize, params, charCounter);
+                            break;
+                        default:
+                             drawTile_Type0(x, y, tileSize, params, charCounter); // Fallback
+                    }
+                    charCounter++; // Increment to use next char influence potentially
+                }
+            }
+        }
+
+        // --- Event Listener ---
+        weaveButton.addEventListener('click', () => {
+            weavePattern(textInput.value);
+        });
+
+        // --- Initial Weave ---
+        // Perform an initial weave when the page loads with the default value
+        document.addEventListener('DOMContentLoaded', () => {
+             weavePattern(textInput.value);
+        });
+
+    </script>
+
+</body>
+</html>
