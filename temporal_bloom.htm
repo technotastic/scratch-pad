@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temporal Bloom - Concept Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #1a1a1a; /* Dark background */
+            color: #e0e0e0;
+            font-family: sans-serif;
+            overflow: hidden; /* Hide scrollbars */
+        }
+        #visualizationCanvas {
+            border: 1px solid #333;
+            background-color: #222; /* Slightly lighter dark for canvas */
+            display: block;
+            margin-top: 20px;
+        }
+        .info {
+            text-align: center;
+            max-width: 600px;
+            padding: 10px 20px;
+            font-size: 0.9em;
+            color: #aaa;
+        }
+        strong {
+            color: #eee;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="info">
+        <h1>Temporal Bloom (Concept Demo)</h1>
+        <p>
+            This is a single-file simulation visualizing the core idea: an abstract representation of collective, hyperlocal presence.
+            The "bloom" below grows more vibrant and complex based on a <strong>simulated activity level</strong> (representing anonymous app users nearby).
+            It naturally decays over time. No real data is used.
+        </p>
+    </div>
+
+    <canvas id="visualizationCanvas"></canvas>
+
+    <script>
+        // --- Configuration ---
+        const CANVAS_SIZE = Math.min(window.innerWidth * 0.8, window.innerHeight * 0.6, 500); // Responsive size
+        const SIMULATION_SPEED = 1; // Affects how fast activity changes
+        const BASE_HUE = 180; // Starting color hue (0-360, cyan-ish)
+        const MAX_ACTIVITY = 1.0; // Max possible simulated activity
+        const MIN_ACTIVITY = 0.05; // Base level activity
+        const ACTIVITY_SENSITIVITY = 0.01; // How much growth per activity unit
+        const NATURAL_DECAY_RATE = 0.995; // Multiplier for decay each frame (closer to 1 = slower decay)
+        const MAX_PETALS = 30;
+        const MIN_PETALS = 5;
+        const MAX_RADIUS_FACTOR = 0.4; // Max radius relative to canvas size
+        const MIN_RADIUS_FACTOR = 0.05; // Min radius relative to canvas size
+        const MAX_SATURATION = 90; // Max HSL saturation %
+        const MIN_SATURATION = 20; // Min HSL saturation %
+        const MAX_LIGHTNESS = 65; // Max HSL lightness %
+        const MIN_LIGHTNESS = 40; // Min HSL lightness %
+
+        // --- State Variables ---
+        let canvas, ctx;
+        let centerX, centerY;
+        let currentActivity = MIN_ACTIVITY;
+        let bloomState = {
+            hue: BASE_HUE,
+            saturation: MIN_SATURATION,
+            lightness: MIN_LIGHTNESS,
+            numPetals: MIN_PETALS,
+            radius: CANVAS_SIZE * MIN_RADIUS_FACTOR,
+            rotation: 0,
+            petalVariation: 0 // Adds subtle irregularity
+        };
+        let lastTimestamp = 0;
+        let activityCycle = 0; // Used for simulation wave
+
+        // --- Initialization ---
+        function init() {
+            canvas = document.getElementById('visualizationCanvas');
+            if (!canvas) {
+                console.error("Canvas element not found!");
+                return;
+            }
+            ctx = canvas.getContext('2d');
+
+            canvas.width = CANVAS_SIZE;
+            canvas.height = CANVAS_SIZE;
+            centerX = canvas.width / 2;
+            centerY = canvas.height / 2;
+
+            // Set initial bloom state more accurately
+            bloomState.radius = CANVAS_SIZE * MIN_RADIUS_FACTOR;
+            bloomState.numPetals = MIN_PETALS;
+
+            console.log("Temporal Bloom Initialized");
+            requestAnimationFrame(animationLoop);
+            // Start simulating activity changes independently
+            setInterval(simulateActivity, 100 * SIMULATION_SPEED);
+        }
+
+        // --- Simulation Logic ---
+        function simulateActivity() {
+            // Use a sine wave for smooth ebb and flow + some noise
+            activityCycle += 0.05 * SIMULATION_SPEED;
+            let baseActivity = (Math.sin(activityCycle) + 1) / 2; // Normalize sine to 0-1
+            let noise = (Math.random() - 0.5) * 0.3; // Add some randomness
+            
+            // Smoothly adjust target activity based on wave and noise
+            let targetActivity = Math.max(MIN_ACTIVITY, Math.min(MAX_ACTIVITY, baseActivity + noise));
+
+            // Gradually move currentActivity towards targetActivity for smoother transitions
+            currentActivity += (targetActivity - currentActivity) * 0.1; // Lerping effect
+            currentActivity = Math.max(MIN_ACTIVITY, Math.min(MAX_ACTIVITY, currentActivity));
+        }
+
+        // --- Update Logic ---
+        function update(deltaTime) {
+            // 1. Natural Decay
+            bloomState.radius *= Math.pow(NATURAL_DECAY_RATE, deltaTime * 60 / 1000); // Adjust decay based on frame time
+            bloomState.saturation *= Math.pow(NATURAL_DECAY_RATE + 0.002, deltaTime * 60 / 1000); // Saturation decays slightly faster
+            bloomState.numPetals *= Math.pow(NATURAL_DECAY_RATE + 0.001, deltaTime * 60 / 1000);
+            
+            // Ensure petals don't decay below minimum
+            bloomState.numPetals = Math.max(MIN_PETALS, bloomState.numPetals);
+            bloomState.radius = Math.max(CANVAS_SIZE * MIN_RADIUS_FACTOR, bloomState.radius);
+            bloomState.saturation = Math.max(MIN_SATURATION, bloomState.saturation);
+
+            // 2. Growth based on Activity
+            const growthFactor = currentActivity * ACTIVITY_SENSITIVITY * (deltaTime * 60 / 1000);
+            bloomState.radius += growthFactor * (CANVAS_SIZE * MAX_RADIUS_FACTOR * 0.5); // Scale growth potential by canvas size
+            bloomState.numPetals += growthFactor * (MAX_PETALS - MIN_PETALS);
+            bloomState.saturation += growthFactor * (MAX_SATURATION - MIN_SATURATION) * 1.5; // Make saturation responsive
+            bloomState.lightness = MIN_LIGHTNESS + (MAX_LIGHTNESS - MIN_LIGHTNESS) * (bloomState.saturation / MAX_SATURATION); // Link lightness to saturation
+
+            // 3. Clamp values to their limits
+            bloomState.radius = Math.min(CANVAS_SIZE * MAX_RADIUS_FACTOR, bloomState.radius);
+            bloomState.numPetals = Math.min(MAX_PETALS, Math.max(MIN_PETALS, bloomState.numPetals));
+            bloomState.saturation = Math.min(MAX_SATURATION, Math.max(MIN_SATURATION, bloomState.saturation));
+            bloomState.lightness = Math.min(MAX_LIGHTNESS, Math.max(MIN_LIGHTNESS, bloomState.lightness));
+
+            // 4. Subtle Visual changes
+            bloomState.rotation += 0.0005 * deltaTime; // Slow rotation
+            bloomState.hue = (BASE_HUE + (currentActivity * 40)) % 360; // Shift hue slightly with activity
+            bloomState.petalVariation = Math.sin(Date.now() * 0.001) * 0.1 + 0.95; // Subtle pulsing size variation for petals
+        }
+
+        // --- Drawing Logic ---
+        function draw() {
+            // Clear canvas with a subtle fade effect
+            ctx.fillStyle = 'rgba(34, 34, 34, 0.15)'; // Trail effect
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(bloomState.rotation);
+
+            const petalCount = Math.round(bloomState.numPetals);
+            const angleStep = (Math.PI * 2) / petalCount;
+
+            for (let i = 0; i < petalCount; i++) {
+                const angle = i * angleStep;
+                const currentRadius = bloomState.radius * bloomState.petalVariation;
+
+                // Calculate petal points (making teardrop shapes)
+                const startX = 0;
+                const startY = 0;
+                const endX = Math.cos(angle) * currentRadius;
+                const endY = Math.sin(angle) * currentRadius;
+                // Control points for curve - create a slight bulge
+                const cp1X = Math.cos(angle - 0.1) * currentRadius * 0.6;
+                const cp1Y = Math.sin(angle - 0.1) * currentRadius * 0.6;
+                const cp2X = Math.cos(angle + 0.1) * currentRadius * 0.6;
+                const cp2Y = Math.sin(angle + 0.1) * currentRadius * 0.6;
+
+                // Vary alpha slightly per petal for depth
+                const alpha = 0.5 + (Math.sin(angle * 5 + Date.now() * 0.002) * 0.2); 
+                const color = `hsla(${bloomState.hue}, ${bloomState.saturation}%, ${bloomState.lightness}%, ${alpha})`;
+                
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                // Using quadraticCurveTo for simpler teardrop petal shapes
+                ctx.quadraticCurveTo(cp1X, cp1Y, endX, endY); 
+                ctx.quadraticCurveTo(cp2X, cp2Y, startX, startY); // Curve back to center
+                ctx.fillStyle = color;
+                ctx.fill();
+            }
+
+            // Optional: Draw a subtle core
+             const coreRadius = Math.max(5, bloomState.radius * 0.1);
+             const coreColor = `hsla(${bloomState.hue}, ${bloomState.saturation - 10}%, ${bloomState.lightness + 10}%, 0.6)`;
+             ctx.beginPath();
+             ctx.arc(0, 0, coreRadius, 0, Math.PI * 2);
+             ctx.fillStyle = coreColor;
+             ctx.fill();
+
+            ctx.restore();
+        }
+
+        // --- Animation Loop ---
+        function animationLoop(timestamp) {
+            const deltaTime = timestamp - lastTimestamp;
+            lastTimestamp = timestamp;
+
+            if (deltaTime > 0) { // Ensure deltaTime is valid
+                update(deltaTime);
+            }
+            draw();
+
+            requestAnimationFrame(animationLoop);
+        }
+
+        // --- Start the app ---
+        // Wait for the DOM to be fully loaded before initializing
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+
+</body>
+</html>
