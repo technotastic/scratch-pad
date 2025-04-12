@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusFuel Gauge</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #212529;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 600px;
+            margin: 20px auto;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        h1, h2 {
+            text-align: center;
+            color: #343a40;
+            margin-bottom: 1em;
+        }
+        .gauge {
+            text-align: center;
+            margin-bottom: 25px;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #e9ecef;
+        }
+        #remainingPointsDisplay {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #007bff; /* Blue for positive indication */
+            display: block;
+            margin-bottom: 5px;
+        }
+         #remainingPointsDisplay.low { color: #ffc107; } /* Yellow when low */
+        #remainingPointsDisplay.empty { color: #dc3545; } /* Red when empty/negative */
+
+        .label {
+            font-size: 0.9em;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .controls, .task-setup, .task-management {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+             background-color: #fdfdfd;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+        }
+        input[type="number"], input[type="text"], select {
+            width: calc(100% - 20px); /* Account for padding */
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 1em;
+            color: #fff;
+            background-color: #28a745; /* Green for positive actions */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-right: 10px;
+            margin-bottom: 5px; /* Spacing for wrapping buttons */
+        }
+        button:hover {
+            filter: brightness(90%);
+        }
+        button.stop-button { background-color: #dc3545; } /* Red for stop */
+        button.reset-button { background-color: #6c757d; } /* Gray for reset */
+        button:disabled {
+            background-color: #adb5bd;
+            cursor: not-allowed;
+        }
+        #taskList, #currentTaskDisplay {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+        #currentTaskDisplay p { margin: 5px 0; }
+        #taskList li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px dotted #ced4da;
+        }
+        #taskList li:last-child { border-bottom: none; }
+        #taskList button {
+            font-size: 0.8em;
+            padding: 3px 8px;
+            background-color: #dc3545;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>FocusFuel Gauge</h1>
+
+        <div class="gauge">
+            <span class="label">Remaining Daily Focus Points</span>
+            <span id="remainingPointsDisplay">--</span>
+        </div>
+
+        <div class="task-setup">
+            <h2>Setup / Manage Tasks</h2>
+            <div>
+                <label for="dailyBudget">Set Daily Point Budget:</label>
+                <input type="number" id="dailyBudget" min="1" step="1" placeholder="e.g., 12">
+                <button id="setBudgetButton">Set Budget</button>
+            </div>
+            <hr style="margin: 20px 0;">
+            <div>
+                <label for="taskName">New Task Name:</label>
+                <input type="text" id="taskName" placeholder="e.g., Deep Work">
+                <label for="taskPoints">Points Consumed Per Hour:</label>
+                <input type="number" id="taskPoints" min="0.1" step="0.1" placeholder="e.g., 3">
+                <button id="addTaskButton">Add Task Type</button>
+            </div>
+            <div id="taskListSection">
+                <h3>Defined Tasks:</h3>
+                <ul id="taskList">
+                    <!-- Task types will be listed here -->
+                    <li>(No tasks defined yet)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="task-management">
+            <h2>Track Current Task</h2>
+            <div>
+                <label for="taskSelect">Select Task to Start:</label>
+                <select id="taskSelect">
+                    <option value="">-- Select Task --</option>
+                    <!-- Task options populated by JS -->
+                </select>
+            </div>
+            <button id="startButton" disabled>Start Task</button>
+            <button id="stopButton" disabled class="stop-button">Stop Task</button>
+            <div id="currentTaskDisplay" style="display: none;">
+                 <p><span class="label">Current Task:</span> <strong id="activeTaskName"></strong></p>
+                 <p><span class="label">Elapsed Time:</span> <span id="elapsedTime">00:00:00</span></p>
+                 <p><span class="label">Points Consuming Now (Est):</span> <span id="consumingPoints">0.0</span></p>
+            </div>
+        </div>
+
+         <div class="controls" style="text-align: center;">
+             <button id="resetDayButton" class="reset-button">Reset Daily Points</button>
+         </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const remainingPointsDisplay = document.getElementById('remainingPointsDisplay');
+        const dailyBudgetInput = document.getElementById('dailyBudget');
+        const setBudgetButton = document.getElementById('setBudgetButton');
+        const taskNameInput = document.getElementById('taskName');
+        const taskPointsInput = document.getElementById('taskPoints');
+        const addTaskButton = document.getElementById('addTaskButton');
+        const taskListUl = document.getElementById('taskList');
+        const taskSelect = document.getElementById('taskSelect');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const currentTaskDisplayDiv = document.getElementById('currentTaskDisplay');
+        const activeTaskNameSpan = document.getElementById('activeTaskName');
+        const elapsedTimeSpan = document.getElementById('elapsedTime');
+        const consumingPointsSpan = document.getElementById('consumingPoints');
+        const resetDayButton = document.getElementById('resetDayButton');
+
+        // --- State Variables ---
+        let dailyBudget = 0;
+        let remainingPoints = 0;
+        let definedTasks = {}; // { "Task Name": pointsPerHour, ... }
+        let currentTask = null; // { name: "Task Name", pointsPerHour: 3, startTime: timestamp }
+        let timerInterval = null;
+        const STORAGE_KEY_TASKS = 'focusFuelTasks';
+        const STORAGE_KEY_BUDGET = 'focusFuelBudget';
+        const STORAGE_KEY_REMAINING = 'focusFuelRemaining';
+        const STORAGE_KEY_BUDGET_DATE = 'focusFuelBudgetDate'; // To track if budget is for today
+
+        // --- Utility Functions ---
+        function getCurrentDateString() {
+            return new Date().toLocaleDateString(); // Gets date like "MM/DD/YYYY" or similar locale format
+        }
+
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
+        function pointsConsumed(pointsPerHour, secondsElapsed) {
+             // Round to avoid floating point issues accumulating over time
+             return Math.round((pointsPerHour * (secondsElapsed / 3600)) * 100) / 100;
+        }
+
+        // --- Local Storage Functions ---
+        function loadState() {
+            const storedTasks = localStorage.getItem(STORAGE_KEY_TASKS);
+            definedTasks = storedTasks ? JSON.parse(storedTasks) : {};
+
+            const storedBudgetDate = localStorage.getItem(STORAGE_KEY_BUDGET_DATE);
+            const today = getCurrentDateString();
+
+            if (storedBudgetDate === today) {
+                const storedBudget = localStorage.getItem(STORAGE_KEY_BUDGET);
+                dailyBudget = storedBudget ? parseFloat(storedBudget) : 0;
+                const storedRemaining = localStorage.getItem(STORAGE_KEY_REMAINING);
+                 // Ensure remaining doesn't exceed today's budget if loaded mid-day after budget change
+                 remainingPoints = storedRemaining ? Math.min(parseFloat(storedRemaining), dailyBudget) : dailyBudget;
+            } else {
+                 // It's a new day, load budget but reset remaining points
+                const storedBudget = localStorage.getItem(STORAGE_KEY_BUDGET);
+                dailyBudget = storedBudget ? parseFloat(storedBudget) : 0;
+                 remainingPoints = dailyBudget; // Start fresh
+                 saveState(); // Save the fresh state for the new day
+            }
+
+             if (dailyBudget > 0) dailyBudgetInput.value = dailyBudget; // Populate input if budget exists
+             updateUI();
+        }
+
+        function saveState() {
+             localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(definedTasks));
+             localStorage.setItem(STORAGE_KEY_BUDGET, dailyBudget.toString());
+             localStorage.setItem(STORAGE_KEY_REMAINING, remainingPoints.toString());
+             localStorage.setItem(STORAGE_KEY_BUDGET_DATE, getCurrentDateString());
+        }
+
+        // --- UI Update Functions ---
+        function updateTaskList() {
+            taskListUl.innerHTML = ''; // Clear list
+            taskSelect.innerHTML = '<option value="">-- Select Task --</option>'; // Clear and add default
+
+            const taskNames = Object.keys(definedTasks);
+            if (taskNames.length === 0) {
+                taskListUl.innerHTML = '<li>(No tasks defined yet)</li>';
+                 startButton.disabled = true;
+                return;
+            }
+
+            taskNames.sort().forEach(name => {
+                const points = definedTasks[name];
+                // Add to management list
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span>${name} (${points} pts/hr)</span>
+                    <button data-taskname="${name}" class="remove-task-button">Remove</button>
+                `;
+                taskListUl.appendChild(li);
+
+                // Add to dropdown selector
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = `${name} (${points} pts/hr)`;
+                taskSelect.appendChild(option);
+            });
+
+            // Enable start button only if tasks exist and a task isn't running
+            startButton.disabled = (currentTask !== null);
+             updateRemoveTaskButtonListeners();
+        }
+
+        function updateRemoveTaskButtonListeners() {
+            document.querySelectorAll('.remove-task-button').forEach(button => {
+                 // Remove existing listener to prevent duplicates if updateTaskList is called multiple times
+                 button.replaceWith(button.cloneNode(true));
+             });
+             // Add new listeners
+             document.querySelectorAll('.remove-task-button').forEach(button => {
+                button.addEventListener('click', handleRemoveTask);
+             });
+        }
+
+         function updateUI() {
+            remainingPointsDisplay.textContent = remainingPoints.toFixed(2);
+             // Update display styling based on remaining points
+             const lowThreshold = dailyBudget * 0.25; // Example: Low when < 25%
+            remainingPointsDisplay.classList.remove('low', 'empty');
+            if (remainingPoints <= 0) {
+                remainingPointsDisplay.classList.add('empty');
+             } else if (remainingPoints <= lowThreshold) {
+                 remainingPointsDisplay.classList.add('low');
+             }
+
+            if (currentTask) {
+                const elapsedSeconds = (Date.now() - currentTask.startTime) / 1000;
+                const consuming = pointsConsumed(currentTask.pointsPerHour, 60); // Show estimated consumption per minute roughly
+
+                elapsedTimeSpan.textContent = formatTime(elapsedSeconds);
+                 consumingPointsSpan.textContent = pointsConsumed(currentTask.pointsPerHour, elapsedSeconds).toFixed(2) + ` (${currentTask.pointsPerHour}/hr)`;
+
+                activeTaskNameSpan.textContent = currentTask.name;
+                currentTaskDisplayDiv.style.display = 'block';
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                taskSelect.disabled = true; // Don't allow changing task while one runs
+            } else {
+                 currentTaskDisplayDiv.style.display = 'none';
+                 // Enable start button only if tasks are defined
+                 startButton.disabled = Object.keys(definedTasks).length === 0;
+                 stopButton.disabled = true;
+                 taskSelect.disabled = false;
+            }
+             updateTaskList(); // Refresh task list and dropdown too
+         }
+
+        // --- Event Handlers ---
+        function handleSetBudget() {
+            const budgetValue = parseFloat(dailyBudgetInput.value);
+            if (!isNaN(budgetValue) && budgetValue > 0) {
+                const oldBudget = dailyBudget;
+                dailyBudget = budgetValue;
+                // If resetting budget for today, adjust remaining points proportionally? Or just set? Let's just set.
+                // If budget was already set for today, we need to recalculate remaining based on difference? Let's simply update remaining IF it's a new day OR remaining == oldBudget.
+                const today = getCurrentDateString();
+                 const storedBudgetDate = localStorage.getItem(STORAGE_KEY_BUDGET_DATE);
+
+                 if (storedBudgetDate !== today || remainingPoints === oldBudget) {
+                    remainingPoints = dailyBudget; // Reset remaining if it's a new day or points were full budget
+                 } else {
+                    // Budget changed mid-day, maintain consumed amount if possible
+                    let consumed = oldBudget - remainingPoints;
+                     remainingPoints = Math.max(0, dailyBudget - consumed); // Adjust, don't go below 0
+                 }
+
+                 saveState();
+                 updateUI();
+                console.log(`Daily budget set to: ${dailyBudget}`);
+            } else {
+                alert("Please enter a valid positive number for the budget.");
+            }
+        }
+
+        function handleAddTask() {
+            const name = taskNameInput.value.trim();
+            const points = parseFloat(taskPointsInput.value);
+
+            if (name && !isNaN(points) && points > 0) {
+                definedTasks[name] = points;
+                 taskNameInput.value = '';
+                 taskPointsInput.value = '';
+                 saveState();
+                 updateUI();
+                 console.log(`Task added: ${name} (${points} pts/hr)`);
+            } else {
+                alert("Please enter a valid task name and a positive number for points per hour.");
+            }
+        }
+
+         function handleRemoveTask(event) {
+            const taskNameToRemove = event.target.dataset.taskname;
+             if (currentTask && currentTask.name === taskNameToRemove) {
+                 alert("Cannot remove the currently active task. Stop it first.");
+                 return;
+             }
+             if (taskNameToRemove && definedTasks[taskNameToRemove]) {
+                 if (confirm(`Are you sure you want to remove task type "${taskNameToRemove}"?`)) {
+                     delete definedTasks[taskNameToRemove];
+                     saveState();
+                     updateUI();
+                     console.log(`Task removed: ${taskNameToRemove}`);
+                 }
+             }
+         }
+
+
+        function handleStartTask() {
+            const selectedTaskName = taskSelect.value;
+            if (!selectedTaskName || !definedTasks[selectedTaskName]) {
+                alert("Please select a valid task from the list.");
+                return;
+            }
+            if (currentTask) {
+                 alert("Another task is already running. Stop it first.");
+                 return; // Already running a task
+            }
+             if (remainingPoints <= 0) {
+                 if (!confirm("Warning: You have no focus points remaining. Start task anyway?")) {
+                     return;
+                 }
+             }
+
+            currentTask = {
+                name: selectedTaskName,
+                pointsPerHour: definedTasks[selectedTaskName],
+                startTime: Date.now()
+            };
+
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(updateUI, 1000); // Update UI every second
+
+            updateUI();
+            console.log(`Started task: ${currentTask.name}`);
+        }
+
+        function handleStopTask() {
+            if (!currentTask) return; // No task running
+
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = null;
+
+            const elapsedSeconds = (Date.now() - currentTask.startTime) / 1000;
+            const consumed = pointsConsumed(currentTask.pointsPerHour, elapsedSeconds);
+
+            remainingPoints -= consumed;
+            if(remainingPoints < 0) remainingPoints = 0; // Don't allow negative points permanently
+
+            console.log(`Stopped task: ${currentTask.name}. Consumed: ${consumed.toFixed(2)} points. Remaining: ${remainingPoints.toFixed(2)}`);
+
+             currentTask = null; // Clear current task
+             saveState(); // Save the new remaining points
+             updateUI();
+        }
+
+        function handleResetDay() {
+            if (confirm("Are you sure you want to reset remaining points to the full daily budget? This cannot be undone for today.")) {
+                 if (currentTask) {
+                     handleStopTask(); // Stop current task first if running
+                 }
+                 remainingPoints = dailyBudget;
+                 saveState();
+                 updateUI();
+                 console.log("Daily points reset.");
+            }
+        }
+
+        // --- Initialization ---
+        setBudgetButton.addEventListener('click', handleSetBudget);
+        addTaskButton.addEventListener('click', handleAddTask);
+        startButton.addEventListener('click', handleStartTask);
+        stopButton.addEventListener('click', handleStopTask);
+        resetDayButton.addEventListener('click', handleResetDay);
+
+         loadState(); // Load saved state on page load
+
+    </script>
+</body>
+</html>
