@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Item Locus - Personal Object Mapper</title>
+    <style>
+        :root {
+            --primary-bg: #f4f7f6;
+            --secondary-bg: #ffffff;
+            --tertiary-bg: #e9ecef;
+            --text-color: #333;
+            --accent-color: #007bff;
+            --border-color: #ced4da;
+            --marker-color: #dc3545;
+            --marker-hover: #ffc107;
+            --shape-color: #adb5bd;
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; /* Prevent body scrolling */
+        }
+        .app-container {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden; /* Important for child scrolling */
+        }
+        .sidebar {
+            width: 280px;
+            background-color: var(--secondary-bg);
+            padding: 20px;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto; /* Allow sidebar scrolling */
+            flex-shrink: 0; /* Prevent sidebar from shrinking */
+        }
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow: hidden; /* Prevent main content scrolling outside canvas */
+        }
+        .canvas-container {
+            position: relative; /* For absolute positioning of tooltip */
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border-radius: 4px;
+            margin-top: 15px;
+            overflow: hidden; /* Ensure canvas stays within bounds */
+            flex-grow: 1; /* Take available vertical space */
+            display: flex; /* Center canvas if needed */
+            justify-content: center;
+            align-items: center;
+             background-image: linear-gradient(45deg, #fdfdfd 25%, transparent 25%), linear-gradient(-45deg, #fdfdfd 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #fdfdfd 75%), linear-gradient(-45deg, transparent 75%, #fdfdfd 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px; /* Subtle grid */
+        }
+        #mapCanvas {
+            display: block; /* Remove extra space */
+            cursor: crosshair; /* Indicate placement mode */
+            max-width: 100%;
+            max-height: 100%;
+        }
+        #tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.75);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            pointer-events: none; /* Don't interfere with mouse */
+            display: none; /* Hidden by default */
+            white-space: pre-wrap; /* Allow line breaks in notes */
+            z-index: 10;
+        }
+
+        /* Controls styling */
+        h1, h2, h3 { margin-top: 0; color: #343a40; }
+        .sidebar h2 { margin-bottom: 15px; font-size: 1.3em;}
+        .sidebar h3 { margin-top: 20px; margin-bottom: 10px; font-size: 1.1em; border-top: 1px solid var(--tertiary-bg); padding-top: 15px;}
+
+        label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9em; }
+        input[type="text"], input[type="search"], select {
+            width: calc(100% - 20px);
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.95em;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 8px 12px;
+            font-size: 0.9em;
+            color: #fff;
+            background-color: var(--accent-color);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-right: 5px; margin-bottom: 5px;
+        }
+        button:hover { filter: brightness(90%); }
+        button.secondary { background-color: #6c757d; }
+        button.danger { background-color: #dc3545; }
+        button:disabled { background-color: #adb5bd; cursor: not-allowed;}
+
+        #locationList { list-style: none; padding: 0; margin: 0; }
+        #locationList li {
+            padding: 8px 10px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.15s;
+        }
+        #locationList li:hover { background-color: var(--tertiary-bg); }
+        #locationList li.active { background-color: var(--accent-color); color: white; font-weight: bold;}
+        #locationList li button { font-size: 0.8em; padding: 2px 6px; }
+
+        .tool-buttons { margin-top: 10px; margin-bottom: 15px;}
+        .tool-buttons button { background-color: #6c757d; }
+        .tool-buttons button.active { background-color: #0056b3; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); }
+
+         #searchSection { border-top: 1px solid var(--tertiary-bg); padding-top: 15px; margin-top: auto; /* Push search to bottom */ }
+        #searchResults { font-size: 0.9em; max-height: 100px; overflow-y: auto; margin-top: 5px;}
+        #searchResults div { padding: 3px; border-bottom: 1px dotted var(--border-color); cursor: pointer;}
+         #searchResults div:hover { background-color: var(--tertiary-bg);}
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="sidebar">
+            <h2>Item Locus</h2>
+
+            <div>
+                <label for="newLocationName">New Location Name:</label>
+                <input type="text" id="newLocationName" placeholder="e.g., Office Desk">
+                <button id="addLocationBtn">Add Location</button>
+            </div>
+
+            <h3>Locations</h3>
+            <ul id="locationList">
+                <li>No locations yet.</li>
+            </ul>
+
+            <div id="searchSection">
+                 <h3>Search Items</h3>
+                <input type="search" id="searchInput" placeholder="Search notes...">
+                <div id="searchResults"></div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <h2 id="currentLocationName">Select or Add a Location</h2>
+            <div class="controls-bar" id="controlsBar" style="display: none;">
+                <span>Tools:</span>
+                <div class="tool-buttons">
+                    <button id="toolPlaceItem" class="active">Place Item</button>
+                    <button id="toolDrawRect">Draw Rect</button>
+                    <button id="toolDrawLine">Draw Line</button>
+                     <button id="toolEraser" title="Click to delete items/shapes">Eraser</button>
+                </div>
+                <span id="currentToolLabel">Current Tool: Place Item</span>
+                <button id="clearMapBtn" class="danger secondary" style="float: right;">Clear Map (Items & Shapes)</button>
+            </div>
+            <div class="canvas-container">
+                <canvas id="mapCanvas"></canvas>
+                 <div id="tooltip"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mapCanvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        const locationListUl = document.getElementById('locationList');
+        const newLocationNameInput = document.getElementById('newLocationName');
+        const addLocationBtn = document.getElementById('addLocationBtn');
+        const currentLocationNameH2 = document.getElementById('currentLocationName');
+        const controlsBar = document.getElementById('controlsBar');
+        const currentToolLabel = document.getElementById('currentToolLabel');
+        const searchInput = document.getElementById('searchInput');
+        const searchResultsDiv = document.getElementById('searchResults');
+        const clearMapBtn = document.getElementById('clearMapBtn');
+
+        // Tool buttons
+        const toolPlaceItemBtn = document.getElementById('toolPlaceItem');
+        const toolDrawRectBtn = document.getElementById('toolDrawRect');
+        const toolDrawLineBtn = document.getElementById('toolDrawLine');
+        const toolEraserBtn = document.getElementById('toolEraser');
+
+        // Constants
+        const STORAGE_KEY_LOCATIONS = 'itemLocusLocations';
+        const MARKER_RADIUS = 6;
+        const LINE_WIDTH = 2;
+        const CANVAS_WIDTH = 800; // Fixed canvas size for simplicity
+        const CANVAS_HEIGHT = 600;
+
+        // App State
+        let locations = {}; // { "locationName": { items: [{x, y, note}], shapes: [{type, x1, y1, x2, y2}] }, ... }
+        let currentTool = 'place'; // 'place', 'drawRect', 'drawLine', 'eraser'
+        let selectedLocation = null;
+        let isDragging = false;
+        let draggedItemIndex = -1;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        let isDrawingShape = false;
+        let shapeStartX = 0;
+        let shapeStartY = 0;
+
+
+        // --- Canvas & Drawing Logic ---
+
+        function resizeCanvas() {
+            // Use fixed internal size, let container handle display scaling
+             canvas.width = CANVAS_WIDTH;
+             canvas.height = CANVAS_HEIGHT;
+            drawCurrentLocation(); // Redraw after resizing buffer
+        }
+
+        function drawMarker(x, y, isHovering = false) {
+            ctx.beginPath();
+            ctx.arc(x, y, MARKER_RADIUS, 0, Math.PI * 2);
+            ctx.fillStyle = isHovering ? 'var(--marker-hover)' : 'var(--marker-color)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+             ctx.lineWidth = 1;
+             ctx.stroke();
+        }
+
+         function drawShape(shape) {
+             ctx.strokeStyle = 'var(--shape-color)';
+             ctx.lineWidth = LINE_WIDTH;
+             ctx.beginPath();
+             if (shape.type === 'rect') {
+                 ctx.rect(shape.x1, shape.y1, shape.x2 - shape.x1, shape.y2 - shape.y1);
+             } else if (shape.type === 'line') {
+                 ctx.moveTo(shape.x1, shape.y1);
+                 ctx.lineTo(shape.x2, shape.y2);
+             }
+             ctx.stroke();
+         }
+
+        function drawCurrentLocation() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (!selectedLocation || !locations[selectedLocation]) return;
+
+             // Draw shapes first (background)
+            locations[selectedLocation].shapes.forEach(shape => drawShape(shape));
+
+             // Draw items (markers)
+            locations[selectedLocation].items.forEach((item, index) => {
+                drawMarker(item.x, item.y, index === getHoveredItemIndex(currentMousePos.x, currentMousePos.y)); // Highlight on hover
+            });
+
+             // If drawing a shape, draw temporary feedback
+             if (isDrawingShape && (currentTool === 'drawRect' || currentTool === 'drawLine')) {
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+                 ctx.lineWidth = 1;
+                 ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                if (currentTool === 'drawRect') {
+                    ctx.rect(shapeStartX, shapeStartY, currentMousePos.x - shapeStartX, currentMousePos.y - shapeStartY);
+                } else { // line
+                    ctx.moveTo(shapeStartX, shapeStartY);
+                     ctx.lineTo(currentMousePos.x, currentMousePos.y);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]); // Reset line dash
+             }
+        }
+
+        // --- State Management ---
+
+        function loadLocations() {
+            const stored = localStorage.getItem(STORAGE_KEY_LOCATIONS);
+            locations = stored ? JSON.parse(stored) : {};
+             // Ensure shapes/items arrays exist for older saves
+             Object.values(locations).forEach(loc => {
+                 loc.items = loc.items || [];
+                 loc.shapes = loc.shapes || [];
+             });
+            updateLocationList();
+        }
+
+        function saveLocations() {
+            localStorage.setItem(STORAGE_KEY_LOCATIONS, JSON.stringify(locations));
+        }
+
+        function addLocation(name) {
+            if (!name || locations[name]) {
+                alert(name ? "Location already exists." : "Please enter a location name.");
+                return;
+            }
+            locations[name] = { items: [], shapes: [] };
+            saveLocations();
+            updateLocationList();
+            selectLocation(name); // Select the newly added location
+            newLocationNameInput.value = '';
+        }
+
+        function deleteLocation(name) {
+            if (!locations[name]) return;
+            if (confirm(`Are you sure you want to delete location "${name}" and all its items/shapes?`)) {
+                delete locations[name];
+                if (selectedLocation === name) {
+                    selectLocation(null); // Deselect if deleting current
+                }
+                saveLocations();
+                updateLocationList();
+            }
+        }
+
+        function addItem(x, y, note) {
+            if (!selectedLocation || !note) return;
+            locations[selectedLocation].items.push({ x, y, note });
+            saveLocations();
+            drawCurrentLocation();
+        }
+
+         function addShape(type, x1, y1, x2, y2) {
+             if (!selectedLocation) return;
+              // Avoid zero-size shapes
+             if (x1 === x2 && y1 === y2) return;
+             locations[selectedLocation].shapes.push({ type, x1, y1, x2, y2 });
+             saveLocations();
+             drawCurrentLocation();
+         }
+
+         function deleteItemOrShapeAt(x, y) {
+             if (!selectedLocation) return;
+
+             let deletedSomething = false;
+
+             // Check items first (higher priority)
+             const itemIndex = getHoveredItemIndex(x, y, MARKER_RADIUS + 2); // Slightly larger radius for erasing
+             if (itemIndex !== -1) {
+                if (confirm(`Delete item: "${locations[selectedLocation].items[itemIndex].note}"?`)) {
+                    locations[selectedLocation].items.splice(itemIndex, 1);
+                    deletedSomething = true;
+                 }
+             } else {
+                // Check shapes
+                 const shapeIndex = getHoveredShapeIndex(x, y);
+                 if (shapeIndex !== -1) {
+                    if (confirm(`Delete this shape?`)) {
+                        locations[selectedLocation].shapes.splice(shapeIndex, 1);
+                        deletedSomething = true;
+                     }
+                 }
+            }
+
+            if(deletedSomething) {
+                saveLocations();
+                 drawCurrentLocation();
+            }
+         }
+
+        function selectLocation(name) {
+            selectedLocation = name;
+            if (name) {
+                currentLocationNameH2.textContent = name;
+                controlsBar.style.display = 'block';
+            } else {
+                currentLocationNameH2.textContent = "Select or Add a Location";
+                 controlsBar.style.display = 'none';
+            }
+            updateLocationList(); // Update active highlighting
+            drawCurrentLocation();
+            tooltip.style.display = 'none'; // Hide tooltip on location change
+        }
+
+        function switchTool(newTool) {
+             // Reset any ongoing actions
+             isDrawingShape = false;
+             isDragging = false;
+
+             currentTool = newTool;
+            console.log("Switched tool to:", currentTool);
+
+            // Update button active states
+            [toolPlaceItemBtn, toolDrawRectBtn, toolDrawLineBtn, toolEraserBtn].forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tool${newTool.charAt(0).toUpperCase() + newTool.slice(1)}Btn`).classList.add('active');
+            currentToolLabel.textContent = `Current Tool: ${newTool.charAt(0).toUpperCase() + newTool.slice(1).replace(/([A-Z])/g, ' $1')}`; // Format tool name
+
+            // Update cursor
+             if (newTool === 'eraser') canvas.style.cursor = 'copy'; // 'copy' sometimes looks like scissors/X
+             else if (newTool.startsWith('draw')) canvas.style.cursor = 'crosshair';
+             else canvas.style.cursor = 'default'; // Place/drag mode
+        }
+
+
+        // --- UI Updates ---
+
+        function updateLocationList() {
+            locationListUl.innerHTML = '';
+            const names = Object.keys(locations);
+            if (names.length === 0) {
+                locationListUl.innerHTML = '<li>No locations yet.</li>';
+                return;
+            }
+            names.sort().forEach(name => {
+                const li = document.createElement('li');
+                li.textContent = name;
+                li.dataset.locationName = name;
+                 if (name === selectedLocation) {
+                    li.classList.add('active');
+                 }
+
+                 const delBtn = document.createElement('button');
+                delBtn.textContent = 'Del';
+                 delBtn.classList.add('danger', 'secondary'); // Make it less prominent than main buttons
+                 delBtn.title = `Delete location ${name}`;
+                delBtn.onclick = (e) => {
+                    e.stopPropagation(); // Prevent li click handler
+                    deleteLocation(name);
+                };
+
+                li.appendChild(delBtn);
+                 li.onclick = () => selectLocation(name);
+                locationListUl.appendChild(li);
+            });
+        }
+
+         function showTooltip(x, y, text) {
+            tooltip.style.left = `${x + 10}px`; // Position slightly offset from cursor
+             tooltip.style.top = `${y + 10}px`;
+            tooltip.textContent = text;
+            tooltip.style.display = 'block';
+        }
+
+        function hideTooltip() {
+            tooltip.style.display = 'none';
+        }
+
+        // --- Event Handlers ---
+
+        function getCanvasMousePos(event) {
+            const rect = canvas.getBoundingClientRect();
+             // Calculate scaling factor if canvas display size != buffer size
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (event.clientX - rect.left) * scaleX,
+                y: (event.clientY - rect.top) * scaleY
+            };
+        }
+
+         // Helper to find item under cursor
+        function getHoveredItemIndex(mouseX, mouseY, tolerance = MARKER_RADIUS) {
+            if (!selectedLocation || !locations[selectedLocation]) return -1;
+             // Search in reverse order so top items are found first
+             for (let i = locations[selectedLocation].items.length - 1; i >= 0; i--) {
+                const item = locations[selectedLocation].items[i];
+                const dx = mouseX - item.x;
+                const dy = mouseY - item.y;
+                if (dx * dx + dy * dy < tolerance * tolerance) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        // Simplified check for shape hovering (basic bounding box / line distance needed for better accuracy)
+         function getHoveredShapeIndex(mouseX, mouseY, tolerance = 5) {
+            if (!selectedLocation || !locations[selectedLocation]) return -1;
+            for (let i = locations[selectedLocation].shapes.length - 1; i >= 0; i--) {
+                 const shape = locations[selectedLocation].shapes[i];
+                 if (shape.type === 'rect') {
+                     // Basic bounding box check
+                     const minX = Math.min(shape.x1, shape.x2);
+                     const maxX = Math.max(shape.x1, shape.x2);
+                     const minY = Math.min(shape.y1, shape.y2);
+                     const maxY = Math.max(shape.y1, shape.y2);
+                      // Check if click is near any edge
+                     if (
+                        (Math.abs(mouseX - minX) < tolerance && mouseY >= minY - tolerance && mouseY <= maxY + tolerance) ||
+                        (Math.abs(mouseX - maxX) < tolerance && mouseY >= minY - tolerance && mouseY <= maxY + tolerance) ||
+                        (Math.abs(mouseY - minY) < tolerance && mouseX >= minX - tolerance && mouseX <= maxX + tolerance) ||
+                        (Math.abs(mouseY - maxY) < tolerance && mouseX >= minX - tolerance && mouseX <= maxX + tolerance)
+                     ) {
+                         return i;
+                    }
+                } else if (shape.type === 'line') {
+                     // Point-to-line segment distance check (simplified: check bounding box first)
+                     const minX = Math.min(shape.x1, shape.x2) - tolerance;
+                     const maxX = Math.max(shape.x1, shape.x2) + tolerance;
+                     const minY = Math.min(shape.y1, shape.y2) - tolerance;
+                     const maxY = Math.max(shape.y1, shape.y2) + tolerance;
+                     if (mouseX >= minX && mouseX <= maxX && mouseY >= minY && mouseY <= maxY) {
+                         // More precise check could go here, but this is often enough for simple lines
+                         // Basic distance from point to infinite line:
+                         let dx = shape.x2 - shape.x1;
+                         let dy = shape.y2 - shape.y1;
+                         let distSq = dx*dx + dy*dy;
+                          if(distSq === 0) continue; // Avoid division by zero if start=end point
+                         let t = ((mouseX - shape.x1) * dx + (mouseY - shape.y1) * dy) / distSq;
+                         t = Math.max(0, Math.min(1, t)); // Clamp to segment
+                         let closestX = shape.x1 + t * dx;
+                         let closestY = shape.y1 + t * dy;
+                          let pointDistSq = (mouseX-closestX)**2 + (mouseY-closestY)**2;
+                          if(pointDistSq < tolerance*tolerance) return i;
+                    }
+                 }
+            }
+             return -1;
+         }
+
+
+         let currentMousePos = { x: 0, y: 0 }; // Track mouse position for redraw highlights
+
+         canvas.addEventListener('mousemove', (e) => {
+            if (!selectedLocation) return;
+            currentMousePos = getCanvasMousePos(e);
+            hideTooltip(); // Hide tooltip initially on move
+
+             if (isDragging && draggedItemIndex !== -1) {
+                 locations[selectedLocation].items[draggedItemIndex].x = currentMousePos.x - dragOffsetX;
+                 locations[selectedLocation].items[draggedItemIndex].y = currentMousePos.y - dragOffsetY;
+                 drawCurrentLocation(); // Redraw while dragging
+             } else if (isDrawingShape && (currentTool === 'drawRect' || currentTool === 'drawLine')) {
+                 drawCurrentLocation(); // Redraw temporary shape feedback
+             } else {
+                 // Check for hover if not dragging/drawing
+                const itemIndex = getHoveredItemIndex(currentMousePos.x, currentMousePos.y);
+                if (itemIndex !== -1) {
+                    showTooltip(e.clientX, e.clientY, locations[selectedLocation].items[itemIndex].note);
+                     canvas.style.cursor = (currentTool === 'place') ? 'move' : (currentTool === 'eraser' ? 'copy' : canvas.style.cursor); // Change cursor if hovering item in place/eraser mode
+                 } else {
+                     // Reset cursor based on tool if not hovering an item
+                      if (currentTool === 'place') canvas.style.cursor = 'default';
+                      else if (currentTool.startsWith('draw')) canvas.style.cursor = 'crosshair';
+                       else if (currentTool === 'eraser') canvas.style.cursor = 'copy';
+                 }
+                 // Only redraw if hover state might change visual (like marker highlight)
+                 if(currentTool === 'place' || currentTool === 'eraser') drawCurrentLocation(); // Redraw for hover highlight change or eraser hover
+             }
+         });
+
+         canvas.addEventListener('mousedown', (e) => {
+             if (!selectedLocation) return;
+            const pos = getCanvasMousePos(e);
+
+            if (currentTool === 'place') {
+                const itemIndex = getHoveredItemIndex(pos.x, pos.y);
+                if (itemIndex !== -1) {
+                    isDragging = true;
+                    draggedItemIndex = itemIndex;
+                     dragOffsetX = pos.x - locations[selectedLocation].items[itemIndex].x;
+                     dragOffsetY = pos.y - locations[selectedLocation].items[itemIndex].y;
+                    canvas.style.cursor = 'grabbing';
+                } else {
+                    // Clicked on empty space in place mode - prompt to add
+                    const note = prompt(`Enter note for item at this location (${pos.x.toFixed(0)}, ${pos.y.toFixed(0)}):`);
+                    if (note !== null && note.trim() !== "") { // Check for cancel and empty string
+                        addItem(pos.x, pos.y, note.trim());
+                    }
+                }
+             } else if (currentTool === 'drawRect' || currentTool === 'drawLine') {
+                 isDrawingShape = true;
+                 shapeStartX = pos.x;
+                 shapeStartY = pos.y;
+            } else if (currentTool === 'eraser') {
+                // Handle deletion on click
+                 deleteItemOrShapeAt(pos.x, pos.y);
+             }
+         });
+
+         canvas.addEventListener('mouseup', (e) => {
+             if (isDragging) {
+                 isDragging = false;
+                draggedItemIndex = -1;
+                 canvas.style.cursor = 'default'; // Reset cursor
+                 saveLocations(); // Save final position after drag
+             }
+             if (isDrawingShape) {
+                 isDrawingShape = false;
+                 const pos = getCanvasMousePos(e);
+                 // Add the final shape
+                addShape(currentTool.substring(4).toLowerCase(), shapeStartX, shapeStartY, pos.x, pos.y);
+                 // Redraw happens within addShape->saveLocations->drawCurrentLocation chain needed? Redraw just in case.
+                drawCurrentLocation();
+             }
+         });
+
+        canvas.addEventListener('mouseleave', () => {
+            hideTooltip();
+             // If dragging/drawing stops bc mouse left canvas, finalize the action
+             if (isDragging) {
+                isDragging = false;
+                 draggedItemIndex = -1;
+                saveLocations();
+            }
+            if (isDrawingShape) {
+                 isDrawingShape = false;
+                 // Don't add shape if mouse leaves before mouseup
+            }
+            // Potentially redraw if hover state was active
+             currentMousePos = {x:-1, y:-1}; // Reset mouse pos so hover clear on redraw
+            drawCurrentLocation();
+        });
+
+        // Button listeners
+        addLocationBtn.addEventListener('click', () => addLocation(newLocationNameInput.value.trim()));
+         newLocationNameInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') addLocationBtn.click(); }); // Enter key submits
+
+        toolPlaceItemBtn.addEventListener('click', () => switchTool('place'));
+         toolDrawRectBtn.addEventListener('click', () => switchTool('drawRect'));
+        toolDrawLineBtn.addEventListener('click', () => switchTool('drawLine'));
+         toolEraserBtn.addEventListener('click', () => switchTool('eraser'));
+
+         clearMapBtn.addEventListener('click', () => {
+             if (selectedLocation && locations[selectedLocation]) {
+                 if (confirm(`Are you sure you want to clear ALL items and shapes from the map "${selectedLocation}"? This cannot be undone.`)) {
+                    locations[selectedLocation].items = [];
+                    locations[selectedLocation].shapes = [];
+                    saveLocations();
+                    drawCurrentLocation();
+                 }
+             }
+         });
+
+        // --- Search Logic ---
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            searchResultsDiv.innerHTML = '';
+            if (searchTerm.length < 2) return; // Min search length
+
+            for (const locName in locations) {
+                 locations[locName].items.forEach((item, index) => {
+                    if (item.note.toLowerCase().includes(searchTerm)) {
+                        const div = document.createElement('div');
+                         // Truncate long notes in search results for display
+                         const displayNote = item.note.length > 50 ? item.note.substring(0, 47) + '...' : item.note;
+                        div.textContent = `"${displayNote}" (in ${locName})`;
+                         div.title = `Click to view ${locName} and highlight item`;
+                         div.onclick = () => {
+                             selectLocation(locName);
+                             // Add temporary highlight? Difficult without modifying drawing code significantly.
+                             // For now, just switching to the location is useful.
+                             console.log(`Found item at ${locName}: (${item.x}, ${item.y})`);
+                             // Could briefly flash the item marker in future enhancement
+                         };
+                         searchResultsDiv.appendChild(div);
+                    }
+                });
+            }
+             if(searchResultsDiv.innerHTML === '') {
+                 searchResultsDiv.innerHTML = '<div>No results found.</div>';
+            }
+        });
+
+
+        // --- Init ---
+        window.addEventListener('load', () => {
+             resizeCanvas(); // Set initial canvas size based on container potentially
+             loadLocations();
+             // Select first location automatically if any exist
+             const firstLoc = Object.keys(locations)[0];
+             if (firstLoc) {
+                selectLocation(firstLoc);
+             } else {
+                selectLocation(null); // Ensure UI is in deselected state
+             }
+            switchTool('place'); // Default tool
+        });
+        // Add resize listener if needed for responsive canvas, but fixed internal is simpler for now
+        // window.addEventListener('resize', resizeCanvas);
+
+    </script>
+</body>
+</html>
