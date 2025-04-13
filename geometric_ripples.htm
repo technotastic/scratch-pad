@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Geometric Ripples</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111; /* Very dark background */
+            color: #eee;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden; /* Prevent scrollbars */
+            cursor: pointer;
+            display: flex; /* For centering instructions */
+            justify-content: center; /* For centering instructions */
+            align-items: flex-start; /* Align instructions to top */
+            min-height: 100vh;
+        }
+
+        #rippleCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block; /* Remove potential extra space */
+        }
+
+        .instructions {
+            position: relative; /* Position relative to flex container */
+            margin-top: 20px;
+            padding: 8px 15px;
+            background-color: rgba(255, 255, 255, 0.1); /* Subtle background */
+            color: rgba(255, 255, 255, 0.7);
+            border-radius: 4px;
+            font-size: 0.9em;
+            z-index: 10; /* Above canvas */
+            pointer-events: none; /* Don't interfere with clicks */
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="instructions">Click to create geometric ripples</div>
+
+    <canvas id="rippleCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('rippleCanvas');
+        const ctx = canvas.getContext('2d');
+        let ripples = []; // Array to hold active ripple objects
+        let animationFrameId = null;
+
+        // --- Configuration ---
+        const MAX_RIPPLE_RADIUS = 150; // How far ripples expand
+        const RIPPLE_SPEED = 1.5;      // How fast radius increases per frame
+        const FADE_SPEED = 0.015;     // How fast opacity decreases per frame
+        const INITIAL_LINE_WIDTH = 3;
+        const SHAPE_SIDES = 6;        // Number of sides (e.g., 3=triangle, 4=square, 6=hexagon)
+        const HUE_SHIFT_SPEED = 0.5;  // How fast the color changes over time
+
+        let baseHue = Math.random() * 360; // Starting color hue
+
+        // --- Canvas Setup ---
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        // --- Ripple Creation ---
+        function createRipple(x, y) {
+            ripples.push({
+                x: x,
+                y: y,
+                radius: 0,
+                opacity: 1.0,
+                lineWidth: INITIAL_LINE_WIDTH,
+                hue: (baseHue + ripples.length * 10) % 360, // Vary hue slightly for new ripples
+                sides: SHAPE_SIDES + Math.floor(Math.random() * 3) - 1, // Allow 5, 6, or 7 sides
+                angleOffset: Math.random() * Math.PI * 2 // Random starting rotation
+            });
+
+            // Start animation loop if not already running
+            if (!animationFrameId) {
+                animateRipples();
+            }
+        }
+
+        // --- Drawing Logic ---
+        function drawPolygon(x, y, radius, sides, angleOffset, color, lineWidth) {
+            if (sides < 3 || radius <= 0) return;
+
+            ctx.beginPath();
+            ctx.moveTo(
+                x + radius * Math.cos(angleOffset),
+                y + radius * Math.sin(angleOffset)
+            );
+
+            for (let i = 1; i <= sides; i++) {
+                const angle = angleOffset + (i * 2 * Math.PI / sides);
+                ctx.lineTo(
+                    x + radius * Math.cos(angle),
+                    y + radius * Math.sin(angle)
+                );
+            }
+
+            ctx.closePath(); // Close the shape path
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+        }
+
+        // --- Animation Loop ---
+        function animateRipples() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Update base hue for color cycling effect
+            baseHue = (baseHue + HUE_SHIFT_SPEED) % 360;
+
+            let stillActive = false; // Flag to check if any ripples are left
+
+            // Iterate backwards for safe removal
+            for (let i = ripples.length - 1; i >= 0; i--) {
+                const ripple = ripples[i];
+
+                // Update ripple properties
+                ripple.radius += RIPPLE_SPEED;
+                ripple.opacity -= FADE_SPEED;
+                ripple.lineWidth = Math.max(0.1, INITIAL_LINE_WIDTH * ripple.opacity); // Line thins as it fades
+
+                // Check if ripple should be removed
+                if (ripple.opacity <= 0 || ripple.radius > MAX_RIPPLE_RADIUS) {
+                    ripples.splice(i, 1); // Remove from array
+                    continue; // Skip drawing this one
+                }
+
+                // If we reach here, at least one ripple is still active
+                stillActive = true;
+
+                // Calculate color using HSL for smooth transitions
+                const color = `hsla(${ripple.hue}, 80%, 65%, ${ripple.opacity})`;
+
+                // Draw the ripple
+                ctx.globalAlpha = ripple.opacity; // Set global alpha (though hsla includes it)
+                drawPolygon(ripple.x, ripple.y, ripple.radius, ripple.sides, ripple.angleOffset, color, ripple.lineWidth);
+                ctx.globalAlpha = 1.0; // Reset global alpha
+            }
+
+            // Request next frame only if ripples are still active
+            if (stillActive) {
+                animationFrameId = requestAnimationFrame(animateRipples);
+            } else {
+                animationFrameId = null; // Stop the loop if no ripples left
+            }
+        }
+
+        // --- Event Listeners ---
+        window.addEventListener('resize', resizeCanvas);
+        document.body.addEventListener('click', (event) => {
+            createRipple(event.clientX, event.clientY);
+        });
+
+         // Add touch support
+        document.body.addEventListener('touchstart', (event) => {
+             // Prevent default touch behavior like scrolling or zooming on canvas area
+            event.preventDefault();
+            // Use the first touch point
+            if (event.touches.length > 0) {
+                const touch = event.touches[0];
+                createRipple(touch.clientX, touch.clientY);
+            }
+        }, { passive: false }); // Need passive: false to call preventDefault
+
+
+        // --- Initial Setup ---
+        resizeCanvas(); // Set initial canvas size
+
+    </script>
+
+</body>
+</html>
