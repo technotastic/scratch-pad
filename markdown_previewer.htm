@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Markdown Previewer</title>
+
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
+    <link
+      id="hljs-theme"
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+
+    <style>
+      /* --- THEME DEFINITIONS --- */
+      :root,
+      body[data-theme="default"] {
+        /* Default Theme (Light) */
+        --bg-color: #f0f0f0;
+        --editor-bg: #ffffff;
+        --preview-bg: #ffffff;
+        --text-color: #333;
+        --border-color: #ccc;
+        --header-bg: #4a4a6a;
+        --header-text: #f0f0f0;
+        --link-color: #0366d6;
+        --code-bg: #f6f8fa;
+        --code-text: #333;
+        --pre-bg: #f6f8fa;
+        --modal-bg: rgba(0, 0, 0, 0.6);
+        --modal-content-bg: #ffffff;
+        --modal-content-text: #333;
+        --modal-code-bg: #eee;
+        --button-bg: #0366d6;
+        --button-text: #ffffff;
+        --button-hover-bg: #005cc5;
+        --blockquote-text: #6a737d;
+        --blockquote-border: #dfe2e5;
+        --hr-color: #e1e4e8;
+        --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+        --font-code: "Consolas", "Monaco", "Courier New", monospace;
+        --hljs-theme-url: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css";
+        --resizer-bg: #ccc;
+        --resizer-hover-bg: #aaa;
+      }
+      @media (prefers-color-scheme: dark) {
+        /* Default Theme (Dark) */
+        body:not([data-theme]),
+        body[data-theme="default"] {
+          --bg-color: #1a1a2e;
+          --editor-bg: #2a2a3e;
+          --preview-bg: #2a2a3e;
+          --text-color: #e0e0e0;
+          --border-color: #4a4a6a;
+          --header-bg: #3a3a5a;
+          --header-text: #e0e0e0;
+          --link-color: #58a6ff;
+          --code-bg: #161b22;
+          --code-text: #c9d1d9;
+          --pre-bg: #161b22;
+          --modal-bg: rgba(0, 0, 0, 0.7);
+          --modal-content-bg: #2a2a3e;
+          --modal-content-text: #e0e0e0;
+          --modal-code-bg: #3a3a5a;
+          --button-bg: #58a6ff;
+          --button-text: #1a1a2e;
+          --button-hover-bg: #80b6ff;
+          --blockquote-text: #8b949e;
+          --blockquote-border: #444c56;
+          --hr-color: #30363d;
+          --hljs-theme-url: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css";
+          --resizer-bg: #4a4a6a;
+          --resizer-hover-bg: #6a6a8a;
+        }
+      }
+      body[data-theme="retro"] {
+        /* Retro Future Theme */
+        --bg-color: #000000;
+        --editor-bg: #0a0a0a;
+        --preview-bg: #050505;
+        --text-color: #00f0f0;
+        --border-color: #00f0f0;
+        --header-bg: #111;
+        --header-text: #00f0f0;
+        --link-color: #33ffff;
+        --code-bg: #111;
+        --code-text: #00f0f0;
+        --pre-bg: #001a1a;
+        --modal-bg: rgba(0, 50, 50, 0.7);
+        --modal-content-bg: #000;
+        --modal-content-text: #00f0f0;
+        --modal-code-bg: #001a1a;
+        --button-bg: #00f0f0;
+        --button-text: #000000;
+        --button-hover-bg: #33ffff;
+        --blockquote-text: #00cccc;
+        --blockquote-border: #00f0f0;
+        --hr-color: #00f0f0;
+        --font-main: "Courier New", Courier, monospace;
+        --font-code: "Courier New", Courier, monospace;
+        --hljs-theme-url: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/vs2015.min.css";
+        text-shadow: 0 0 2px rgba(0, 240, 240, 0.3);
+        --resizer-bg: #00f0f0;
+        --resizer-hover-bg: #33ffff;
+      }
+      body[data-theme="retro"] h1,
+      body[data-theme="retro"] h2,
+      body[data-theme="retro"] h3,
+      body[data-theme="retro"] a,
+      body[data-theme="retro"] button {
+        text-shadow: 0 0 5px var(--text-color);
+      }
+      body[data-theme="retro"] .pane {
+        box-shadow: 0 0 10px rgba(0, 240, 240, 0.3);
+      }
+      body[data-theme="office"] {
+        /* Classic Office Theme */
+        --bg-color: #c0c0c0;
+        --editor-bg: #ffffff;
+        --preview-bg: #ffffff;
+        --text-color: #000000;
+        --border-color: #7f7f7f;
+        --header-bg: #000080;
+        --header-text: #ffffff;
+        --link-color: #0000ff;
+        --code-bg: #f0f0f0;
+        --code-text: #000000;
+        --pre-bg: #f0f0f0;
+        --modal-bg: rgba(50, 50, 50, 0.6);
+        --modal-content-bg: #ffffff;
+        --modal-content-text: #000000;
+        --modal-code-bg: #e0e0e0;
+        --button-bg: #000080;
+        --button-text: #ffffff;
+        --button-hover-bg: #0000cd;
+        --blockquote-text: #333333;
+        --blockquote-border: #a0a0a0;
+        --hr-color: #a0a0a0;
+        --font-main: "Times New Roman", Times, serif;
+        --font-code: "Courier New", Courier, monospace;
+        --hljs-theme-url: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/stackoverflow-light.min.css";
+        --resizer-bg: #7f7f7f;
+        --resizer-hover-bg: #606060;
+      }
+      body[data-theme="office"] button,
+      body[data-theme="office"] .pane {
+        border: 1px solid #7f7f7f;
+        border-right-color: #404040;
+        border-bottom-color: #404040;
+        box-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #c0c0c0;
+      }
+      body[data-theme="office"] button:active {
+        border-color: #404040;
+        border-right-color: #ffffff;
+        border-bottom-color: #ffffff;
+        box-shadow: inset -1px -1px 0 #ffffff, inset 1px 1px 0 #c0c0c0;
+        filter: none;
+      }
+
+      /* --- BASE STYLES --- */
+      html {
+        box-sizing: border-box;
+      }
+      *,
+      *:before,
+      *:after {
+        box-sizing: inherit;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--font-main);
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+
+      header {
+        background-color: var(--header-bg);
+        color: var(--header-text);
+        padding: 10px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        z-index: 10;
+        flex-shrink: 0;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.5em;
+      }
+      .header-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      #themeSelector {
+        padding: 4px 8px;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+        background-color: var(--editor-bg);
+        color: var(--text-color);
+        font-size: 0.9em;
+      }
+
+      .container {
+        display: flex;
+        flex-grow: 1;
+        overflow: hidden;
+        background-color: var(--bg-color);
+        padding: 10px;
+        transition: background-color 0.3s ease;
+      }
+
+      .pane {
+        flex-grow: 1;
+        flex-shrink: 1;
+        flex-basis: 0;
+        min-width: 150px;
+        min-height: 150px;
+        background-color: var(--editor-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: background-color 0.3s ease, border-color 0.3s ease,
+          flex-basis 0.1s ease;
+      }
+
+      #resizer {
+        flex: 0 0 10px;
+        background-color: var(--resizer-bg);
+        cursor: col-resize;
+        margin: 0 5px;
+        border-radius: 3px;
+        transition: background-color 0.3s ease;
+        position: relative;
+        align-self: stretch;
+      }
+      #resizer:hover,
+      #resizer.active {
+        background-color: var(--resizer-hover-bg);
+      }
+
+      .pane-header {
+        padding: 8px 12px;
+        font-weight: bold;
+        border-bottom: 1px solid var(--border-color);
+        background-color: var(--bg-color);
+        font-size: 0.9em;
+        color: var(--text-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+        transition: background-color 0.3s ease, color 0.3s ease,
+          border-color 0.3s ease;
+      }
+      .pane-header span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .pane-controls {
+        display: flex;
+        gap: 5px;
+      }
+
+      #editor {
+        flex-grow: 1;
+        border: none;
+        padding: 15px;
+        font-family: var(--font-code);
+        font-size: 14px;
+        line-height: 1.5;
+        resize: none;
+        outline: none;
+        background-color: var(--editor-bg);
+        color: var(--text-color);
+        width: 100%;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+
+      #preview {
+        flex-grow: 1;
+        padding: 15px;
+        overflow-y: auto;
+        background-color: var(--preview-bg);
+        color: var(--text-color);
+        word-wrap: break-word;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+
+      /* Markdown Content Styling */
+      #preview > *:first-child {
+        margin-top: 0;
+      }
+      #preview h1,
+      #preview h2,
+      #preview h3,
+      #preview h4,
+      #preview h5,
+      #preview h6 {
+        margin-top: 24px;
+        margin-bottom: 16px;
+        font-weight: 600;
+        line-height: 1.25;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.3em;
+        transition: border-color 0.3s ease;
+      }
+      #preview h1 {
+        font-size: 2em;
+      }
+      #preview h2 {
+        font-size: 1.5em;
+      }
+      #preview h3 {
+        font-size: 1.25em;
+      }
+      #preview p {
+        margin-top: 0;
+        margin-bottom: 16px;
+      }
+      #preview a {
+        color: var(--link-color);
+        text-decoration: none;
+        transition: color 0.3s ease;
+      }
+      #preview a:hover {
+        text-decoration: underline;
+      }
+      #preview ul,
+      #preview ol {
+        margin-top: 0;
+        margin-bottom: 16px;
+        padding-left: 2em;
+      }
+      #preview blockquote {
+        margin: 0 0 16px 0;
+        padding: 0 1em;
+        color: var(--blockquote-text);
+        border-left: 0.25em solid var(--blockquote-border);
+        transition: color 0.3s ease, border-color 0.3s ease;
+      }
+      #preview code {
+        padding: 0.2em 0.4em;
+        margin: 0;
+        font-size: 85%;
+        background-color: var(--code-bg);
+        border-radius: 3px;
+        font-family: var(--font-code);
+        color: var(--code-text);
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      #preview pre {
+        padding: 16px;
+        overflow: auto;
+        font-size: 85%;
+        line-height: 1.45;
+        background-color: var(--pre-bg);
+        border-radius: 3px;
+        margin-bottom: 16px;
+        word-wrap: normal;
+        transition: background-color 0.3s ease;
+      }
+      #preview pre code {
+        display: inline;
+        padding: 0;
+        margin: 0;
+        overflow: visible;
+        line-height: inherit;
+        word-wrap: normal;
+        background-color: transparent;
+        border: 0;
+        color: inherit;
+      }
+      #preview img {
+        max-width: 100%;
+        height: auto;
+        background-color: var(--preview-bg);
+      }
+      #preview table {
+        border-collapse: collapse;
+        margin-bottom: 16px;
+        display: block;
+        width: max-content;
+        max-width: 100%;
+        overflow: auto;
+      }
+      #preview th,
+      #preview td {
+        border: 1px solid var(--border-color);
+        padding: 6px 13px;
+        transition: border-color 0.3s ease;
+      }
+      #preview th {
+        font-weight: 600;
+      }
+      #preview hr {
+        height: 0.25em;
+        padding: 0;
+        margin: 24px 0;
+        background-color: var(--hr-color);
+        border: 0;
+        transition: background-color 0.3s ease;
+      }
+      #preview del {
+        color: var(--blockquote-text);
+      }
+      #preview ul li.task-list-item {
+        list-style-type: none;
+        margin-left: -1.5em;
+        position: relative;
+      }
+      #preview li.task-list-item input[type="checkbox"] {
+        margin: 0 0.5em 0.2em 0;
+        vertical-align: middle;
+        position: relative;
+        top: -0.05em;
+        width: 1em;
+        height: 1em;
+      }
+
+      /* Utility Buttons */
+      .utility-button {
+        background-color: var(--button-bg);
+        color: var(--button-text);
+        border: none;
+        padding: 6px 12px;
+        font-size: 0.9em;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s ease, color 0.2s ease,
+          border-color 0.2s ease, box-shadow 0.2s ease;
+        margin-left: 5px;
+      }
+      .utility-button:hover {
+        background-color: var(--button-hover-bg);
+      }
+      .utility-button:active {
+        filter: brightness(90%);
+      }
+
+      /* --- Modal Styles (Corrected) --- */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: var(--modal-bg);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        /* --- FIX: Initially hidden --- */
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease, background-color 0.3s ease;
+      }
+      .modal-overlay.active {
+        /* --- FIX: Visible when active --- */
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .modal-content {
+        background-color: var(--modal-content-bg);
+        color: var(--modal-content-text);
+        padding: 25px;
+        border-radius: 8px;
+        max-width: 90%;
+        width: 700px;
+        max-height: 85vh;
+        overflow-y: auto;
+        position: relative;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        transform: scale(0.95);
+        transition: transform 0.3s ease, background-color 0.3s ease,
+          color 0.3s ease;
+      }
+      .modal-overlay.active .modal-content {
+        transform: scale(1);
+      }
+      .modal-close-button {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        background: none;
+        border: none;
+        font-size: 1.8em;
+        color: var(--modal-content-text);
+        cursor: pointer;
+        line-height: 1;
+        padding: 0;
+        opacity: 0.7;
+        transition: color 0.3s ease, opacity 0.2s ease;
+      }
+      .modal-close-button:hover {
+        opacity: 1;
+      }
+      .modal-content h2 {
+        margin-top: 0;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 10px;
+        transition: border-color 0.3s ease;
+      }
+      .modal-content h3 {
+        margin-top: 20px;
+        margin-bottom: 8px;
+        font-size: 1.1em;
+      }
+      .modal-content pre {
+        background-color: var(--modal-code-bg);
+        padding: 10px;
+        border-radius: 4px;
+        overflow-x: auto;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+        transition: background-color 0.3s ease;
+      }
+      .modal-content code {
+        font-family: var(--font-code);
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        header {
+          flex-wrap: wrap;
+          padding: 8px 15px;
+        }
+        header h1 {
+          font-size: 1.2em;
+          margin-bottom: 5px;
+          width: 100%;
+          text-align: center;
+        }
+        .header-controls {
+          width: 100%;
+          justify-content: center;
+        }
+        .container {
+          flex-direction: column;
+          height: auto;
+          overflow-y: auto;
+          padding: 5px;
+        }
+        .pane {
+          height: 50vh;
+          min-height: 200px;
+          flex-basis: auto;
+          min-width: unset;
+        }
+        #resizer {
+          flex: 0 0 10px;
+          width: auto;
+          height: 10px;
+          margin: 5px 0;
+          cursor: row-resize;
+          align-self: auto;
+        }
+        body {
+          height: auto;
+          overflow-y: auto;
+        }
+        .modal-content {
+          width: 90%;
+        }
+      }
+    </style>
+  </head>
+  <body data-theme="default">
+    <header>
+      <h1>Markdown Previewer</h1>
+      <div class="header-controls">
+        <select id="themeSelector" aria-label="Select theme">
+          <option value="default">Default Theme</option>
+          <option value="retro">Retro Future</option>
+          <option value="office">Classic Office</option>
+        </select>
+        <button id="cheatSheetButton" class="utility-button">
+          Cheat Sheet
+        </button>
+      </div>
+    </header>
+
+    <div class="container" id="mainContainer">
+      <div class="pane" id="editorPane">
+        <div class="pane-header">
+          <span>Markdown Input</span>
+          <div class="pane-controls">
+            <button
+              id="copyMdButton"
+              class="utility-button"
+              title="Copy Markdown Source"
+            >
+              Copy MD
+            </button>
+          </div>
+        </div>
+        <textarea
+          id="editor"
+          spellcheck="false"
+          placeholder="Type your Markdown here..."
+        ></textarea>
+      </div>
+
+      <div id="resizer"></div>
+
+      <div class="pane" id="previewPane">
+        <div class="pane-header">
+          <span>HTML Preview</span>
+          <div class="pane-controls">
+            <button
+              id="copyHtmlButton"
+              class="utility-button"
+              title="Copy HTML Output"
+            >
+              Copy HTML
+            </button>
+          </div>
+        </div>
+        <div id="preview"></div>
+      </div>
+    </div>
+
+    <!-- Cheat Sheet Modal -->
+    <div id="cheatSheetModal" class="modal-overlay">
+      <div class="modal-content">
+        const cheatSheetHTML = `
+        <h3>Headers</h3>
+        <pre><code># Heading level 1
+## Heading level 2
+### Heading level 3
+#### Heading level 4
+##### Heading level 5
+###### Heading level 6</code></pre>
+
+        <h3>Emphasis</h3>
+        <pre><code>*Italic text*   or   _Italic text_
+**Bold text**   or   __Bold text__
+***Bold and Italic***   or   ___Bold and Italic___
+~~Strikethrough text~~</code></pre>
+
+        <h3>Lists</h3>
+        <pre><code>**Unordered List:**
+* Item A
+* Item B
+  * Nested Item B1
+  * Nested Item B2
+- Alternative marker
+
+**Ordered List:**
+1. First item
+2. Second item
+3. Third item
+   1. Nested ordered item</code></pre>
+
+        <h3>Links</h3>
+        <pre><code>Inline link: [Link Text](https://www.example.com "Optional Title")
+Automatic link: <https://www.example.com></code></pre>
+
+        <h3>Images</h3>
+        <pre><code>![Alt text describing the image](/path/to/image.jpg "Optional Title")
+[![Alt text](image.png)](https://link.com)  (Image as a link)</code></pre>
+
+        <h3>Code</h3>
+        <pre><code>Use backticks for \`inline code\`.
+
+For code blocks, use triple backticks and specify language (optional):
+\`\`\`javascript
+function greet(name) {
+  console.log(\`Hello, \${name}!\`);
+}
+\`\`\`
+
+\`\`\`python
+# Or another language
+def hello(name):
+  print(f"Hi, {name}")
+\`\`\`
+
+\`\`\`text
+Plain text block without highlighting.
+\`\`\`</code></pre>
+
+        <h3>Blockquotes</h3>
+        <pre><code>> This is the first level of quoting.
+>
+> > This is nested blockquote.
+>
+> Back to the first level.</code></pre>
+
+        <h3>Tables (GFM)</h3>
+        <pre><code>| Feature         | Support | Notes                     |
+| :-------------- | :-----: | :------------------------ |
+| Left Align      | Center  | Right Align               |
+| *Cell content*  | \`code\`  | Can have **Markdown**     |
+| Cell 3          | Cell 4  | Cell 5                    |
+
+*Colons define alignment.*</code></pre>
+
+        <h3>Task Lists (GFM)</h3>
+        <p>Works within ordered and unordered lists:</p>
+        <pre><code>- [x] Completed task (Unordered)
+- [ ] Incomplete task (Unordered)
+
+1. [ ] Ordered task item 1
+2. [x] Ordered task item 2</code></pre>
+
+        <h3>Horizontal Rule</h3>
+        <p>Use three or more hyphens, asterisks, or underscores:</p>
+        <pre><code>---
+
+***
+
+___</code></pre>
+      </div>
+    </div>
+
+    <script>
+      // --- DOM Elements ---
+      const editor = document.getElementById("editor");
+      const preview = document.getElementById("preview");
+      const copyMdButton = document.getElementById("copyMdButton");
+      const copyHtmlButton = document.getElementById("copyHtmlButton");
+      const cheatSheetButton = document.getElementById("cheatSheetButton");
+      const modalOverlay = document.getElementById("cheatSheetModal");
+      const modalCloseButton = document.getElementById("modalCloseButton");
+      const themeSelector = document.getElementById("themeSelector");
+      const hljsThemeLink = document.getElementById("hljs-theme");
+      const resizer = document.getElementById("resizer");
+      const editorPane = document.getElementById("editorPane");
+      const previewPane = document.getElementById("previewPane");
+      const mainContainer = document.getElementById("mainContainer");
+
+      // --- Theme Handling ---
+      function applyTheme(themeName) {
+        document.body.dataset.theme = themeName;
+        localStorage.setItem("markdownTheme", themeName);
+        const computedStyle = getComputedStyle(document.body);
+        const newHljsThemeUrl = computedStyle
+          .getPropertyValue("--hljs-theme-url")
+          .trim()
+          .replace(/['"]/g, "");
+        if (newHljsThemeUrl && hljsThemeLink.href !== newHljsThemeUrl) {
+          hljsThemeLink.href = newHljsThemeUrl;
+        }
+        if (themeSelector.value !== themeName) {
+          themeSelector.value = themeName;
+        }
+      }
+
+      // --- Marked.js Config ---
+      marked.setOptions({
+        renderer: new marked.Renderer(),
+        highlight: function (code, lang) {
+          const language = hljs.getLanguage(lang) ? lang : "plaintext";
+          try {
+            return hljs.highlight(code, { language, ignoreIllegals: true })
+              .value;
+          } catch (error) {
+            console.error("Highlight.js error:", error);
+            return hljs.highlight(code, {
+              language: "plaintext",
+              ignoreIllegals: true,
+            }).value;
+          }
+        },
+        pedantic: false,
+        gfm: true,
+        breaks: false,
+        sanitize: false,
+        smartLists: true,
+        smartypants: false,
+        xhtml: false,
+      });
+
+      // --- Core Functions ---
+      function updatePreview() {
+        const markdownText = editor.value;
+        try {
+          const rawHtml = marked.parse(markdownText);
+          const cleanHtml = DOMPurify.sanitize(rawHtml);
+          preview.innerHTML = cleanHtml;
+          preview.querySelectorAll("pre code:not(.hljs)").forEach((block) => {
+            // Avoid re-highlighting
+            try {
+              hljs.highlightElement(block);
+            } catch (e) {
+              console.error("Highlighting error", e, block);
+            }
+          });
+        } catch (error) {
+          console.error("Markdown Parsing Error:", error);
+          preview.innerHTML = `<p style="color: red;">Error parsing Markdown. Check console.</p>`;
+        }
+      }
+
+      function copyHtml() {
+        const htmlToCopy = preview.innerHTML;
+        navigator.clipboard
+          .writeText(htmlToCopy)
+          .then(() => {
+            copyHtmlButton.textContent = "Copied!";
+            setTimeout(() => {
+              copyHtmlButton.textContent = "Copy HTML";
+            }, 1500);
+          })
+          .catch((err) => {
+            console.error("Failed to copy HTML: ", err);
+            copyHtmlButton.textContent = "Error!";
+            setTimeout(() => {
+              copyHtmlButton.textContent = "Copy HTML";
+            }, 1500);
+          });
+      }
+
+      function copyMarkdown() {
+        const markdownToCopy = editor.value;
+        navigator.clipboard
+          .writeText(markdownToCopy)
+          .then(() => {
+            copyMdButton.textContent = "Copied!";
+            setTimeout(() => {
+              copyMdButton.textContent = "Copy MD";
+            }, 1500);
+          })
+          .catch((err) => {
+            console.error("Failed to copy Markdown: ", err);
+            copyMdButton.textContent = "Error!";
+            setTimeout(() => {
+              copyMdButton.textContent = "Copy MD";
+            }, 1500);
+          });
+      }
+
+      // --- Modal Logic (Corrected) ---
+      function openModal() {
+        if (modalOverlay) {
+          // Check if element exists
+          modalOverlay.classList.add("active");
+        } else {
+          console.error("Modal overlay element not found!");
+        }
+      }
+
+      function closeModal() {
+        if (modalOverlay) {
+          // Check if element exists
+          modalOverlay.classList.remove("active");
+        }
+      }
+
+      // --- Resizer Logic ---
+      let isResizing = false;
+      let startX, startY, initialEditorFlexBasis, initialPreviewFlexBasis;
+
+      function getPaneFlexBasis(pane) {
+        const isVertical =
+          window.getComputedStyle(mainContainer).flexDirection === "column";
+        const totalSize = isVertical
+          ? mainContainer.clientHeight - (resizer ? resizer.offsetHeight : 0)
+          : mainContainer.clientWidth - (resizer ? resizer.offsetWidth : 0);
+        if (totalSize <= 0) return 50; // Avoid division by zero, default to 50%
+        const paneSize = isVertical ? pane.offsetHeight : pane.offsetWidth;
+        return (paneSize / totalSize) * 100;
+      }
+
+      if (resizer) {
+        // Only add listeners if resizer exists
+        resizer.addEventListener("mousedown", (e) => {
+          isResizing = true;
+          startX = e.clientX;
+          startY = e.clientY;
+          initialEditorFlexBasis = getPaneFlexBasis(editorPane);
+          initialPreviewFlexBasis = getPaneFlexBasis(previewPane);
+          resizer.classList.add("active");
+          document.body.style.userSelect = "none";
+          document.body.style.cursor =
+            window.getComputedStyle(mainContainer).flexDirection === "column"
+              ? "row-resize"
+              : "col-resize";
+          document.addEventListener("mousemove", handleMouseMove);
+          document.addEventListener("mouseup", handleMouseUp);
+        });
+
+        resizer.addEventListener(
+          "touchstart",
+          (e) => {
+            isResizing = true;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            initialEditorFlexBasis = getPaneFlexBasis(editorPane);
+            initialPreviewFlexBasis = getPaneFlexBasis(previewPane);
+            resizer.classList.add("active");
+            document.body.style.webkitUserSelect = "none";
+            document.body.style.userSelect = "none";
+            document.addEventListener("touchmove", handleTouchMove, {
+              passive: false,
+            });
+            document.addEventListener("touchend", handleTouchEnd);
+          },
+          { passive: true }
+        );
+      }
+
+      function handleMouseMove(e) {
+        if (isResizing) handleResize(e.clientX, e.clientY);
+      }
+      function handleTouchMove(e) {
+        if (isResizing) {
+          e.preventDefault();
+          handleResize(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }
+
+      function handleResize(currentX, currentY) {
+        const isVertical =
+          window.getComputedStyle(mainContainer).flexDirection === "column";
+        const containerSize = isVertical
+          ? mainContainer.clientHeight - (resizer ? resizer.offsetHeight : 0)
+          : mainContainer.clientWidth - (resizer ? resizer.offsetWidth : 0);
+        if (containerSize <= 0) return; // Avoid calculations if container size is invalid
+
+        let dx = currentX - startX;
+        let dy = currentY - startY;
+        const deltaPercentage = isVertical
+          ? (dy / containerSize) * 100
+          : (dx / containerSize) * 100;
+
+        let newEditorBasis = initialEditorFlexBasis + deltaPercentage;
+        let newPreviewBasis = initialPreviewFlexBasis - deltaPercentage;
+
+        const minBasis = 10; // Minimum 10%
+        if (newEditorBasis < minBasis) {
+          newEditorBasis = minBasis;
+          newPreviewBasis = 100 - minBasis;
+        } else if (newPreviewBasis < minBasis) {
+          newPreviewBasis = minBasis;
+          newEditorBasis = 100 - minBasis;
+        }
+
+        // Ensure basis values are numbers before setting
+        if (!isNaN(newEditorBasis) && !isNaN(newPreviewBasis)) {
+          editorPane.style.flexBasis = `${newEditorBasis}%`;
+          previewPane.style.flexBasis = `${newPreviewBasis}%`;
+          editorPane.style.flexGrow = "0";
+          editorPane.style.flexShrink = "0";
+          previewPane.style.flexGrow = "0";
+          previewPane.style.flexShrink = "0";
+        }
+      }
+
+      function handleMouseUp() {
+        if (isResizing) {
+          isResizing = false;
+          resizer.classList.remove("active");
+          document.body.style.userSelect = "";
+          document.body.style.cursor = "";
+          document.removeEventListener("mousemove", handleMouseMove);
+          document.removeEventListener("mouseup", handleMouseUp);
+        }
+      }
+      function handleTouchEnd() {
+        if (isResizing) {
+          isResizing = false;
+          resizer.classList.remove("active");
+          document.body.style.webkitUserSelect = "";
+          document.body.style.userSelect = "";
+          document.removeEventListener("touchmove", handleTouchMove);
+          document.removeEventListener("touchend", handleTouchEnd);
+        }
+      }
+
+      // --- Event Listeners (Corrected Modal Listeners) ---
+      editor.addEventListener("input", updatePreview);
+      copyMdButton.addEventListener("click", copyMarkdown);
+      copyHtmlButton.addEventListener("click", copyHtml);
+      cheatSheetButton.addEventListener("click", openModal); // Correctly opens modal
+
+      // Ensure modal close listeners are only added if elements exist
+      if (modalCloseButton) {
+        modalCloseButton.addEventListener("click", closeModal);
+      }
+      if (modalOverlay) {
+        modalOverlay.addEventListener("click", (event) => {
+          // Close only if clicking the overlay itself, not the content inside
+          if (event.target === modalOverlay) {
+            closeModal();
+          }
+        });
+      }
+      document.addEventListener("keydown", (event) => {
+        if (
+          event.key === "Escape" &&
+          modalOverlay &&
+          modalOverlay.classList.contains("active")
+        ) {
+          closeModal();
+        }
+      });
+
+      themeSelector.addEventListener("change", (event) => {
+        applyTheme(event.target.value);
+        updatePreview();
+      });
+
+      // --- Initial Load ---
+      const savedTheme = localStorage.getItem("markdownTheme") || "default";
+      applyTheme(savedTheme);
+
+      // Default Markdown text
+      // Default Markdown text (with Image Example Restored)
+      editor.value = `# Welcome to the Markdown Previewer! ✨
+
+This editor provides a live preview of your **Markdown** text as you type. It supports **GitHub Flavored Markdown (GFM)** and offers several features:
+
+*   📝 Real-time HTML Preview
+*   🎨 Theme Selection (Default, Retro Future, Classic Office)
+*   ↔️ Resizable Panes (Drag the divider!)
+*   ✨ Syntax Highlighting (in the preview)
+*   📋 Copy Markdown / Copy HTML buttons
+*   ❓ Handy Cheat Sheet
+
+---
+
+## Quick Examples
+
+### Task List Examples
+GFM Task Lists work in both types:
+- [x] This is an unordered, completed task.
+- [ ] This is an unordered, incomplete task.
+1. [ ] This is an ordered, incomplete task.
+2. [x] This is an ordered, completed task.
+
+### Links & Images
+You can create links: [Visit Example.com](https://example.com "An example domain")
+
+And display images (requires a valid URL):
+
+![Markdown Logo](https://markdown-here.com/img/icon256.png "Markdown Logo")
+
+### Code Block (JavaScript)
+\`\`\`javascript
+function calculate(a, b) {
+  // Check the preview pane for highlighted code!
+  return a + b;
+}
+const result = calculate(5, 10);
+console.log(\`The result is: \${result}\`);
+\`\`\`
+
+### Table Example
+| Item        | Category | Status   |
+| :---------- | :------: | :------- |
+| Previewer   | Tool     | Complete |
+| Theming     | Feature  | Added    |
+| More Ideas? | Future   | Pending  |
+
+### Quote
+> "Simplicity is the ultimate sophistication."
+> _- Leonardo da Vinci (maybe)_
+
+---
+
+➡️ Try editing this text, paste your own Markdown, or use the **Cheat Sheet** button if you need help with syntax!
+`;
+
+      // Initial preview rendering
+      updatePreview();
+    </script>
+  </body>
+</html>
