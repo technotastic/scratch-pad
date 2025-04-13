@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Interactive Cosmic Canvas</title>
+    <style>
+        /* Basic Reset & Body Styling */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a2e; /* Dark blue background */
+            color: #e0e0e0; /* Light text color */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* Removed justify-content: center to allow content flow */
+            min-height: 100vh;
+            overflow: hidden; /* Prevent scrollbars */
+            text-align: center;
+            padding-top: 15px; /* Add some space at the top */
+            padding-bottom: 15px;
+        }
+
+        /* Canvas Styling */
+        #cosmicCanvas {
+            border: 1px solid #4a4a6a; /* Subtle border */
+            background-color: #0f0f1a; /* Even darker canvas background */
+            cursor: crosshair;
+            display: block; /* Prevents extra space below canvas */
+            margin-top: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 0 15px rgba(74, 74, 106, 0.5); /* Subtle glow */
+            touch-action: none; /* Crucial for preventing scrolling/zooming while drawing on touch devices */
+        }
+
+        /* Header and Paragraph Styling */
+        h1 {
+            color: #f0c040; /* Gold-ish color */
+            margin-bottom: 5px;
+            text-shadow: 0 0 5px rgba(240, 192, 64, 0.5);
+        }
+
+        p {
+            color: #b0b0c0; /* Lighter grey */
+            margin-top: 0;
+            margin-bottom: 10px;
+            max-width: 90%;
+        }
+
+        /* Controls Container */
+        .controls {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+            justify-content: center;
+            align-items: center;
+            gap: 15px; /* Spacing between controls */
+            margin-bottom: 15px;
+            width: 90%;
+            max-width: 500px; /* Limit width of controls */
+        }
+
+        /* Slider Styling */
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.9em;
+            color: #c0c0d0;
+        }
+
+        input[type="range"] {
+            cursor: pointer;
+            width: 120px; /* Adjust width as needed */
+        }
+
+        #burstSizeValue {
+            min-width: 25px; /* Ensure space for 3 digits */
+            text-align: right;
+            font-weight: bold;
+            color: #f0c040;
+        }
+
+
+        /* Button Styling */
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            color: #1a1a2e;
+            background-color: #f0c040;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        button:hover {
+            background-color: #ffda70; /* Lighter gold on hover */
+        }
+
+        button:active {
+            transform: scale(0.98); /* Slight press effect */
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>Interactive Cosmic Canvas</h1>
+    <p>Click or Drag on the canvas below to create vibrant cosmic bursts!</p>
+
+    <canvas id="cosmicCanvas"></canvas>
+
+    <div class="controls">
+        <div class="slider-container">
+            <label for="burstSizeSlider">Burst Size:</label>
+            <input type="range" id="burstSizeSlider" min="10" max="150" value="50">
+            <span id="burstSizeValue">50</span>
+        </div>
+        <button id="clearButton">Clear Canvas</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('cosmicCanvas');
+        const ctx = canvas.getContext('2d');
+        const clearButton = document.getElementById('clearButton');
+        const burstSizeSlider = document.getElementById('burstSizeSlider');
+        const burstSizeValueDisplay = document.getElementById('burstSizeValue');
+
+        let canvasWidth, canvasHeight;
+        let isDrawing = false; // Flag to track if mouse/touch is down
+
+        // --- Canvas Setup ---
+
+        function resizeCanvas() {
+            // Adjust height calculation to make space for controls
+            canvasWidth = window.innerWidth * 0.95; // Use more width
+            canvasHeight = window.innerHeight * 0.65; // Reduce height percentage
+
+            // Ensure minimum size
+            canvasWidth = Math.max(canvasWidth, 300);
+            canvasHeight = Math.max(canvasHeight, 200);
+
+            // Cap maximum size if needed (optional)
+            // canvasWidth = Math.min(canvasWidth, 1000);
+            // canvasHeight = Math.min(canvasHeight, 600);
+
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            drawBackground(); // Redraw background after resize
+        }
+
+        function drawBackground() {
+            ctx.fillStyle = '#0f0f1a'; // Dark canvas background
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // --- Drawing Logic ---
+
+        function createBurst(x, y) {
+            const sizeMultiplier = parseInt(burstSizeSlider.value) / 50; // Get value (10-150), normalize around 1 (at 50)
+            const baseParticleCount = 30;
+            const baseMaxRadius = 40;
+
+            const particleCount = Math.floor(baseParticleCount * sizeMultiplier + Math.random() * 20 * sizeMultiplier);
+            const maxRadius = baseMaxRadius * sizeMultiplier;
+            const baseHue = Math.random() * 360; // Base color hue
+
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2; // Random direction
+                // Make radius distribution non-linear (more particles closer)
+                const radius = Math.pow(Math.random(), 1.5) * (maxRadius + Math.random() * 20 * sizeMultiplier);
+                const particleSize = 1 + Math.random() * 2.5 * Math.sqrt(sizeMultiplier); // Scale size slightly
+
+                const particleX = x + Math.cos(angle) * radius;
+                const particleY = y + Math.sin(angle) * radius;
+
+                const saturation = 70 + Math.random() * 30;
+                const lightness = 50 + Math.random() * 30;
+                const particleColor = `hsl(${baseHue + (Math.random() - 0.5) * 60}, ${saturation}%, ${lightness}%)`;
+
+                ctx.fillStyle = particleColor;
+                ctx.beginPath();
+                // Draw slightly elongated particles for a different feel (optional)
+                // ctx.ellipse(particleX, particleY, particleSize * 0.7, particleSize * 1.3, angle, 0, Math.PI * 2);
+                ctx.arc(particleX, particleY, particleSize, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // --- Event Coordinate Helper ---
+
+        function getEventCoordinates(event) {
+            const rect = canvas.getBoundingClientRect();
+            let x, y;
+
+            if (event.touches && event.touches.length > 0) {
+                // Touch event
+                x = event.touches[0].clientX - rect.left;
+                y = event.touches[0].clientY - rect.top;
+            } else {
+                // Mouse event
+                x = event.clientX - rect.left;
+                y = event.clientY - rect.top;
+            }
+            return { x, y };
+        }
+
+        // --- Event Handlers ---
+
+        function startDrawing(event) {
+            isDrawing = true;
+            const { x, y } = getEventCoordinates(event);
+            createBurst(x, y);
+            // No preventDefault here, allow click/tap action
+        }
+
+        function draw(event) {
+            if (!isDrawing) return;
+
+            // Prevent scrolling/zooming on touch devices while drawing
+            if (event.touches) {
+                event.preventDefault();
+            }
+
+            const { x, y } = getEventCoordinates(event);
+            createBurst(x, y);
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        // --- Event Listeners ---
+
+        // Mouse Events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing); // Stop if mouse leaves canvas
+
+        // Touch Events (Mobile Compatibility)
+        canvas.addEventListener('touchstart', startDrawing);
+        canvas.addEventListener('touchmove', draw);
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('touchcancel', stopDrawing); // Handle interrupted touches
+
+        // Clear Button
+        clearButton.addEventListener('click', drawBackground);
+
+        // Burst Size Slider
+        burstSizeSlider.addEventListener('input', () => {
+            burstSizeValueDisplay.textContent = burstSizeSlider.value;
+        });
+
+        // Window Resize
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- Initial Setup ---
+        burstSizeValueDisplay.textContent = burstSizeSlider.value; // Set initial display value
+        resizeCanvas(); // Set initial size and draw background
+
+    </script>
+
+</body>
+</html>
