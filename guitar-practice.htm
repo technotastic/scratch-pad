@@ -1,594 +1,2225 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Luthier's Practice Atelier</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Nunito+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Nunito+Sans:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        /* --- Luthier's Atelier Theme (v3) --- */
-        :root {
-            --wood-dark: #3a1f1d; --wood-medium: #7a4a3f; --wood-light: #e0d6c7;
-            --wood-accent: #b08c6a; --string-gold: #d4af7a; --rosette-red: #802a2b;
-            --text-dark: #211211; --text-light: #f8f6f2; --border-color: #a8957d;
-            --card-bg: rgba(248, 246, 242, 0.92); /* Slightly more opaque */
-            --success-color: #5f8a5a; --danger-color: var(--rosette-red);
-            --shadow-color-dark: rgba(58, 31, 29, 0.35);
-            --shadow-color-light: rgba(58, 31, 29, 0.15);
-            --font-headings: 'Cormorant Garamond', serif; --font-body: 'Nunito Sans', sans-serif;
-        }
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: var(--font-body); line-height: 1.6; background-color: var(--wood-light);
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%237a4a3f' fill-opacity='0.06'%3E%3Cpath fill-rule='evenodd' d='M0 0h40v40H0V0zm40 40h40v40H40V40zM0 40h40v40H0V40zm40 0h40v40H40V40z'/%3E%3Cpath d='M38 38c0-9.94-8.06-18-18-18S2 28.06 2 38h36zm4 0c0-9.94-8.06-18-18-18S22 28.06 22 38h20zM2 2c9.94 0 18 8.06 18 18S11.94 38 2 38V2zm20 0c9.94 0 18 8.06 18 18S31.94 38 22 38V2z'/%3E%3C/g%3E%3C/svg%3E");
-            color: var(--text-dark); display: flex; flex-direction: column; min-height: 100vh;
-        }
-        #app-container { display: flex; flex-direction: column; flex-grow: 1; }
+      /* --- Luthier's Atelier Theme (v3) --- */
+      :root {
+        --wood-dark: #3a1f1d;
+        --wood-medium: #7a4a3f;
+        --wood-light: #e0d6c7;
+        --wood-accent: #b08c6a;
+        --string-gold: #d4af7a;
+        --rosette-red: #802a2b;
+        --text-dark: #211211;
+        --text-light: #f8f6f2;
+        --border-color: #a8957d;
+        --card-bg: rgba(248, 246, 242, 0.92); /* Slightly more opaque */
+        --success-color: #5f8a5a;
+        --danger-color: var(--rosette-red);
+        --shadow-color-dark: rgba(58, 31, 29, 0.35);
+        --shadow-color-light: rgba(58, 31, 29, 0.15);
+        --font-headings: "Cormorant Garamond", serif;
+        --font-body: "Nunito Sans", sans-serif;
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: var(--font-body);
+        line-height: 1.6;
+        background-color: var(--wood-light);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%237a4a3f' fill-opacity='0.06'%3E%3Cpath fill-rule='evenodd' d='M0 0h40v40H0V0zm40 40h40v40H40V40zM0 40h40v40H0V40zm40 0h40v40H40V40z'/%3E%3Cpath d='M38 38c0-9.94-8.06-18-18-18S2 28.06 2 38h36zm4 0c0-9.94-8.06-18-18-18S22 28.06 22 38h20zM2 2c9.94 0 18 8.06 18 18S11.94 38 2 38V2zm20 0c9.94 0 18 8.06 18 18S31.94 38 22 38V2z'/%3E%3C/g%3E%3C/svg%3E");
+        color: var(--text-dark);
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      #app-container {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+      }
 
-        /* --- Utility Bar --- */
-        #utility-bar {
-            background: linear-gradient(170deg, var(--wood-medium), var(--wood-dark)); color: var(--text-light);
-            padding: 10px 25px; display: flex; justify-content: space-between; align-items: center;
-            flex-wrap: wrap; gap: 15px 20px; /* Reduced gap slightly */
-            box-shadow: 0 3px 6px var(--shadow-color-dark), inset 0 1px 2px rgba(255,255,255,0.1);
-            border-bottom: 3px solid var(--wood-dark); position: sticky; top: 0; z-index: 100;
-        }
-        .utility-group { /* Group related controls */
-             display: flex; flex-wrap: wrap; gap: 15px 20px; align-items: center;
-        }
-        .utility-section { display: flex; align-items: center; gap: 8px; }
-        .utility-section label { font-size: 0.85em; font-weight: 600; color: var(--wood-light); text-shadow: 1px 1px 1px var(--shadow-color-dark); margin-bottom: 0; }
-        .utility-section input[type="number"], .utility-section select {
-            width: auto; min-width: 60px; padding: 5px 10px; border: 1px solid var(--wood-accent); border-radius: 15px;
-            font-size: 0.9em; background-color: var(--wood-light); color: var(--text-dark); text-align: center;
-            box-shadow: inset 0 1px 3px var(--shadow-color-dark); margin-bottom: 0; vertical-align: middle; height: 30px;
-        }
-        .utility-section select {
-            text-align: left; padding-left: 12px; padding-right: 25px;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%233a1f1d'%3E%3Cpath d='M8 11L3 6h10L8 11z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat; background-position: right 8px center; background-size: 10px 10px; appearance: none;
-        }
-        .utility-section button { /* Base style for utility buttons */
-            padding: 5px 15px; font-size: 0.85em; background: linear-gradient(to bottom, var(--wood-dark), #2a1a19);
-            border: 1px solid var(--wood-accent); color: var(--text-light); border-radius: 15px; font-weight: 600;
-            transition: background 0.2s, border-color 0.2s; height: 30px; vertical-align: middle; display: inline-flex;
-            align-items: center; justify-content: center; box-shadow: 0 1px 2px var(--shadow-color-dark); text-transform: uppercase; letter-spacing: 0.5px;
-        }
-        .utility-section button:hover:not(:disabled) { background: linear-gradient(to bottom, var(--wood-accent), var(--wood-medium)); border-color: var(--wood-dark); color: var(--text-dark); transform: none; }
-        .utility-section button.danger { background: linear-gradient(to bottom, var(--rosette-red), #601a1b); border-color: #400a0b; }
-        .utility-section button.tuner-play-btn { /* Play detected note */
-             padding: 3px 8px; background: none; border: 1px solid var(--string-gold); color: var(--string-gold); border-radius: 50%;
-             width: 28px; height: 28px; margin-left: 5px; opacity: 0.5; cursor: not-allowed;
-        }
-        .utility-section button.tuner-play-btn:not(:disabled) { opacity: 1; cursor: pointer; }
-        .utility-section button.tuner-play-btn:hover:not(:disabled) { background-color: rgba(212, 175, 122, 0.2); border-color: var(--text-light); color: var(--text-light); }
-        .utility-section button.play-ref-btn { /* Play reference note */
-             padding: 3px 8px; background: var(--string-gold); border: 1px solid var(--wood-dark); color: var(--text-dark); border-radius: 50%;
-             width: 28px; height: 28px; margin-left: 2px;
-        }
-         .utility-section button.play-ref-btn:hover:not(:disabled) { background: lighten(var(--string-gold), 10%); }
-         .utility-section button svg { width: 14px; height: 14px; fill: currentColor; }
-        #metronome-visual { /* Same as before */ width: 18px; height: 18px; background-color: var(--text-light); border-radius: 50%; opacity: 0.6; transition: all 0.1s ease-out; box-shadow: 0 0 4px rgba(0,0,0,0.4), inset 0 1px 1px rgba(0,0,0,0.2); vertical-align: middle; }
-        #metronome-visual.beat { background-color: var(--string-gold); transform: scale(1.25); opacity: 1; }
-        #tuner-display { /* Same as before */ font-weight: 600; min-width: 150px; text-align: center; background-color: rgba(0,0,0,0.15); padding: 5px 10px; border-radius: 4px; border: 1px solid transparent; transition: border-color 0.3s; color: var(--wood-light); height: 30px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }
-        /* Tuner note/cents spans adjusted if needed */
-        .tuner-note { font-size: 1.1em; margin-right: 5px; }
-        .tuner-cents { font-size: 0.9em; }
-        .tuner-in-tune { color: var(--success-color); }
-        .tuner-sharp, .tuner-flat { color: var(--string-gold); }
-
-
-        /* --- Main Content & Cards --- */
-        #main-content { /* Same as before */ padding: 30px; flex-grow: 1; display: flex; flex-direction: column; gap: 30px; }
-        @media (min-width: 850px) { #main-content { flex-direction: row; } #piece-management, #section-management { flex: 1; max-width: 420px; min-width: 320px; } #practice-area-wrapper { flex: 1.5; } }
-        h1, h2, h3 { /* Same as before */ font-family: var(--font-headings); color: var(--wood-dark); margin-bottom: 20px; font-weight: 700; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; text-shadow: 1px 1px 0px var(--wood-light); }
-        h1 { font-size: 2.4em; } h2 { font-size: 1.8em; } h3 { font-size: 1.5em; margin-top: 30px; }
-        .card { /* Same as before */ background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px var(--shadow-color-dark), inset 0 1px 2px rgba(255,255,255,0.5); margin-bottom: 30px; border: 1px solid var(--border-color); border-top: 1px solid lighten(var(--border-color), 5%); backdrop-filter: blur(4px); position: relative; background-image: linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 20px 20px; }
-
-        /* --- Forms & Buttons --- */
-        label { /* Same as before */ display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.95em; color: var(--wood-medium); text-transform: capitalize; }
-        input[type="text"], input[type="number"], textarea, select { /* Same as before */ width: 100%; padding: 12px 15px; margin-bottom: 20px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1em; background-color: var(--text-light); color: var(--text-dark); font-family: var(--font-body); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
-        textarea { /* Same as before */ height: 80px; resize: vertical; }
-        input:focus, textarea:focus, select:focus { /* Same as before */ outline: none; border-color: var(--wood-accent); box-shadow: 0 0 0 3px rgba(176, 140, 106, 0.3), inset 0 2px 4px rgba(0,0,0,0.1); }
-        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; } input[type=number] { -moz-appearance: textfield; }
-        button { /* Main buttons - Same as before */ background: linear-gradient(to bottom, var(--wood-medium), var(--wood-dark)); color: var(--text-light); border: 1px solid var(--wood-dark); padding: 12px 25px; border-radius: 25px; cursor: pointer; font-size: 1.05em; font-weight: 600; font-family: var(--font-body); transition: all 0.2s ease; margin-right: 10px; margin-top: 10px; box-shadow: 0 3px 5px var(--shadow-color-dark), inset 0 -1px 1px rgba(0,0,0,0.2); text-shadow: 1px 1px 1px rgba(0,0,0,0.3); }
-        button:hover:not(:disabled) { background: linear-gradient(to bottom, var(--wood-accent), var(--wood-medium)); border-color: var(--wood-dark); transform: translateY(-2px); box-shadow: 0 5px 8px var(--shadow-color-dark), inset 0 -1px 1px rgba(0,0,0,0.1); }
-        button:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 2px 4px var(--shadow-color-dark); }
-        /* Primary, Danger, Secondary button variations - Same as before */
-        button.primary { background: linear-gradient(to bottom, var(--string-gold), var(--wood-accent)); color: var(--text-dark); border-color: var(--wood-medium); }
-        button.primary:hover:not(:disabled) { background: linear-gradient(to bottom, lighten(var(--string-gold), 5%), lighten(var(--wood-accent), 5%)); }
-        button.danger { background: linear-gradient(to bottom, var(--rosette-red), #601a1b); border-color: #400a0b; }
-        button.danger:hover:not(:disabled) { background: linear-gradient(to bottom, lighten(var(--rosette-red), 5%), var(--rosette-red)); }
-        button.secondary { background: linear-gradient(to bottom, #b8a58a, #8c7a6a); border-color: #7a6a5a; color: var(--text-dark); }
-        button.secondary:hover:not(:disabled) { background: linear-gradient(to bottom, #c8b59a, #9c8a7a); }
-        button:disabled { background: #b0a9a0; border-color: #918b84; color: #6b6661; cursor: not-allowed; transform: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); text-shadow: none; opacity: 0.6; }
-        /* Icon Button Style - Same as before */
-        button.icon-button { padding: 8px 10px; margin-left: 5px; border-radius: 6px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; }
-        button.icon-button svg { width: 16px; height: 16px; fill: currentColor; margin-right: 5px; }
-        button.icon-button span { display: none; } @media (min-width: 400px) { button.icon-button span { display: inline; } }
-
-        /* --- List Items --- */
-        .list-item { /* Same as before */ border: 1px solid var(--border-color); background-color: rgba(255, 255, 255, 0.6); padding: 15px 20px; margin-bottom: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; transition: background-color 0.3s, border-left 0.3s, box-shadow 0.3s; box-shadow: 0 1px 3px var(--shadow-color-light); }
-        .list-item:hover { background-color: rgba(255, 255, 255, 0.8); box-shadow: 0 3px 6px var(--shadow-color-light); }
-        .list-item-content { flex-grow: 1; }
-        .list-item-actions button { padding: 5px 12px; font-size: 0.85em; border-radius: 15px; margin-left: 5px; }
-        .list-item.selected { background-color: rgba(212, 175, 122, 0.25); border-left: 6px solid var(--string-gold); padding-left: 14px; box-shadow: 0 3px 6px var(--shadow-color-light); }
-        .list-item strong { font-size: 1.2em; color: var(--wood-dark); font-weight: 700; font-family: var(--font-headings); }
-        .list-item em { font-size: 0.9em; color: var(--wood-medium); display: block; margin-top: 4px; font-style: normal; }
-        .list-item-actions .edit-button { background: var(--wood-accent); border-color: var(--wood-medium); color: var(--text-dark); }
-        .list-item-actions .edit-button:hover:not(:disabled) { background: lighten(var(--wood-accent), 5%); }
-
-        /* --- Section Management & Form --- */
-        #section-management { display: none; }
-        #section-list { margin-top: 20px; max-height: 450px; overflow-y: auto; padding-right: 10px; }
-        #add-section-form { border-top: 1px dashed var(--border-color); margin-top: 25px; padding-top: 25px; transition: background-color 0.3s; }
-        #add-section-form.editing { background-color: rgba(212, 175, 122, 0.1); padding: 20px; margin: 20px -30px -30px -30px; border-radius: 0 0 12px 12px; border-top: 1px solid var(--wood-accent); }
-        #add-section-form h3 { margin-top: 0; } /* Adjust heading margin inside form */
-
-        /* --- Practice Area --- */
-        #practice-area-wrapper { display: none; }
-        #practice-area { /* Same as before */ background-color: rgba(224, 214, 199, 0.4); padding: 30px; border-radius: 12px; border: 1px solid var(--wood-accent); box-shadow: 0 5px 15px var(--shadow-color-dark), inset 0 0 50px rgba(58, 31, 29, 0.05); }
-        .practice-display { /* Same as before */ font-size: 1.1em; margin-bottom: 25px; padding: 20px; background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1); }
-        .practice-display div { margin-bottom: 12px; } .practice-display strong { display: inline-block; min-width: 110px; color: var(--wood-dark); font-weight: 600; }
-        .practice-progress-bar { /* Same as before */ width: 100%; height: 14px; background-color: var(--border-color); border-radius: 7px; overflow: hidden; margin-top: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); border: 1px solid rgba(0,0,0,0.1); }
-        .practice-progress-bar-inner { /* Same as before */ height: 100%; width: 0%; background: linear-gradient(to right, var(--string-gold), darken(var(--string-gold), 10%)); transition: width 0.4s ease; border-radius: 7px; box-shadow: inset 0 -1px 1px rgba(0,0,0,0.15); }
-        #pNotes { /* Same as before */ font-style: italic; color: var(--wood-medium); background-color: rgba(255,255,255,0.5); padding: 12px; border-radius: 4px; margin-top: 15px; display: block; border-left: 4px solid var(--wood-accent); }
-        #practice-controls { /* Same as before */ display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-top: 30px; }
-        #practice-controls button { padding: 12px 30px; font-size: 1.1em; }
-        #completionMessage { /* Same as before */ color: var(--success-color); font-weight: 600; font-size: 1.25em; text-align: center; margin-top: 25px; background-color: rgba(95, 138, 90, 0.15); padding: 15px; border-radius: 8px; border: 1px solid var(--success-color); }
-
-        /* --- Error & Hidden --- */
-        .error-message { /* Same as before */ color: var(--danger-color); background-color: rgba(128, 42, 43, 0.1); border: 1px solid var(--danger-color); padding: 12px 15px; border-radius: 6px; margin-bottom: 18px; font-weight: 600; font-size: 0.95em; }
-        .hidden { display: none !important; } /* Use important to ensure hiding */
-
-        /* --- Scrollbar --- */
+      /* --- Utility Bar --- */
+      #utility-bar {
+        background: linear-gradient(
+          170deg,
+          var(--wood-medium),
+          var(--wood-dark)
+        );
+        color: var(--text-light);
+        padding: 10px 25px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px 20px; /* Reduced gap slightly */
+        box-shadow: 0 3px 6px var(--shadow-color-dark),
+          inset 0 1px 2px rgba(255, 255, 255, 0.1);
+        border-bottom: 3px solid var(--wood-dark);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .utility-group {
+        /* Group related controls */
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px 20px;
+        align-items: center;
+      }
+      .utility-section {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .utility-section label {
+        font-size: 0.85em;
+        font-weight: 600;
+        color: var(--wood-light);
+        text-shadow: 1px 1px 1px var(--shadow-color-dark);
+        margin-bottom: 0;
+      }
+      .utility-section input[type="number"],
+      .utility-section select {
+        width: auto;
+        min-width: 60px;
+        padding: 5px 10px;
+        border: 1px solid var(--wood-accent);
+        border-radius: 15px;
+        font-size: 0.9em;
+        background-color: var(--wood-light);
+        color: var(--text-dark);
+        text-align: center;
+        box-shadow: inset 0 1px 3px var(--shadow-color-dark);
+        margin-bottom: 0;
+        vertical-align: middle;
+        height: 30px;
+      }
+      .utility-section select {
+        text-align: left;
+        padding-left: 12px;
+        padding-right: 25px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%233a1f1d'%3E%3Cpath d='M8 11L3 6h10L8 11z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+        background-size: 10px 10px;
+        appearance: none;
+      }
+      .utility-section button {
+        /* Base style for utility buttons */
+        padding: 5px 15px;
+        font-size: 0.85em;
+        background: linear-gradient(to bottom, var(--wood-dark), #2a1a19);
+        border: 1px solid var(--wood-accent);
+        color: var(--text-light);
+        border-radius: 15px;
+        font-weight: 600;
+        transition: background 0.2s, border-color 0.2s;
+        height: 30px;
+        vertical-align: middle;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 1px 2px var(--shadow-color-dark);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .utility-section button:hover:not(:disabled) {
+        background: linear-gradient(
+          to bottom,
+          var(--wood-accent),
+          var(--wood-medium)
+        );
+        border-color: var(--wood-dark);
+        color: var(--text-dark);
+        transform: none;
+      }
+      .utility-section button.danger {
+        background: linear-gradient(to bottom, var(--rosette-red), #601a1b);
+        border-color: #400a0b;
+      }
+      .utility-section button.tuner-play-btn {
+        /* Play detected note */
+        padding: 3px 8px;
+        background: none;
+        border: 1px solid var(--string-gold);
+        color: var(--string-gold);
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        margin-left: 5px;
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .utility-section button.tuner-play-btn:not(:disabled) {
+        opacity: 1;
+        cursor: pointer;
+      }
+      .utility-section button.tuner-play-btn:hover:not(:disabled) {
+        background-color: rgba(212, 175, 122, 0.2);
+        border-color: var(--text-light);
+        color: var(--text-light);
+      }
+      .utility-section button.play-ref-btn {
+        /* Play reference note */
+        padding: 3px 8px;
+        background: var(--string-gold);
+        border: 1px solid var(--wood-dark);
+        color: var(--text-dark);
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        margin-left: 2px;
+      }
+      .utility-section button.play-ref-btn:hover:not(:disabled) {
+        background: lighten(var(--string-gold), 10%);
+      }
+      .utility-section button svg {
+        width: 14px;
+        height: 14px;
+        fill: currentColor;
+      }
+      #metronome-visual {
         /* Same as before */
-        ::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-track { background: var(--wood-light); border-radius: 5px; border: 1px solid var(--border-color);} ::-webkit-scrollbar-thumb { background: var(--wood-accent); border-radius: 5px; border: 1px solid var(--wood-medium);} ::-webkit-scrollbar-thumb:hover { background: var(--wood-medium); }
+        width: 18px;
+        height: 18px;
+        background-color: var(--text-light);
+        border-radius: 50%;
+        opacity: 0.6;
+        transition: all 0.1s ease-out;
+        box-shadow: 0 0 4px rgba(0, 0, 0, 0.4),
+          inset 0 1px 1px rgba(0, 0, 0, 0.2);
+        vertical-align: middle;
+      }
+      #metronome-visual.beat {
+        background-color: var(--string-gold);
+        transform: scale(1.25);
+        opacity: 1;
+      }
+      #tuner-display {
+        /* Same as before */
+        font-weight: 600;
+        min-width: 150px;
+        text-align: center;
+        background-color: rgba(0, 0, 0, 0.15);
+        padding: 5px 10px;
+        border-radius: 4px;
+        border: 1px solid transparent;
+        transition: border-color 0.3s;
+        color: var(--wood-light);
+        height: 30px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        vertical-align: middle;
+      }
+      /* Tuner note/cents spans adjusted if needed */
+      .tuner-note {
+        font-size: 1.1em;
+        margin-right: 5px;
+      }
+      .tuner-cents {
+        font-size: 0.9em;
+      }
+      .tuner-in-tune {
+        color: var(--success-color);
+      }
+      .tuner-sharp,
+      .tuner-flat {
+        color: var(--string-gold);
+      }
 
-        /* --- SVG Icons --- */
-        .icon { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; fill: currentColor; }
+      /* --- Main Content & Cards --- */
+      #main-content {
+        /* Same as before */
+        padding: 30px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+      }
+      @media (min-width: 850px) {
+        #main-content {
+          flex-direction: row;
+        }
+        #piece-management,
+        #section-management {
+          flex: 1;
+          max-width: 420px;
+          min-width: 320px;
+        }
+        #practice-area-wrapper {
+          flex: 1.5;
+        }
+      }
+      h1,
+      h2,
+      h3 {
+        /* Same as before */
+        font-family: var(--font-headings);
+        color: var(--wood-dark);
+        margin-bottom: 20px;
+        font-weight: 700;
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 10px;
+        text-shadow: 1px 1px 0px var(--wood-light);
+      }
+      h1 {
+        font-size: 2.4em;
+      }
+      h2 {
+        font-size: 1.8em;
+      }
+      h3 {
+        font-size: 1.5em;
+        margin-top: 30px;
+      }
+      .card {
+        /* Same as before */
+        background: var(--card-bg);
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 5px 15px var(--shadow-color-dark),
+          inset 0 1px 2px rgba(255, 255, 255, 0.5);
+        margin-bottom: 30px;
+        border: 1px solid var(--border-color);
+        border-top: 1px solid lighten(var(--border-color), 5%);
+        backdrop-filter: blur(4px);
+        position: relative;
+        background-image: linear-gradient(
+            rgba(255, 255, 255, 0.05) 1px,
+            transparent 1px
+          ),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        background-size: 20px 20px;
+      }
 
+      /* --- Forms & Buttons --- */
+      label {
+        /* Same as before */
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        font-size: 0.95em;
+        color: var(--wood-medium);
+        text-transform: capitalize;
+      }
+      input[type="text"],
+      input[type="number"],
+      textarea,
+      select {
+        /* Same as before */
+        width: 100%;
+        padding: 12px 15px;
+        margin-bottom: 20px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 1em;
+        background-color: var(--text-light);
+        color: var(--text-dark);
+        font-family: var(--font-body);
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      textarea {
+        /* Same as before */
+        height: 80px;
+        resize: vertical;
+      }
+      input:focus,
+      textarea:focus,
+      select:focus {
+        /* Same as before */
+        outline: none;
+        border-color: var(--wood-accent);
+        box-shadow: 0 0 0 3px rgba(176, 140, 106, 0.3),
+          inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      input[type="number"]::-webkit-inner-spin-button,
+      input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      input[type="number"] {
+        -moz-appearance: textfield;
+      }
+      button {
+        /* Main buttons - Same as before */
+        background: linear-gradient(
+          to bottom,
+          var(--wood-medium),
+          var(--wood-dark)
+        );
+        color: var(--text-light);
+        border: 1px solid var(--wood-dark);
+        padding: 12px 25px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 1.05em;
+        font-weight: 600;
+        font-family: var(--font-body);
+        transition: all 0.2s ease;
+        margin-right: 10px;
+        margin-top: 10px;
+        box-shadow: 0 3px 5px var(--shadow-color-dark),
+          inset 0 -1px 1px rgba(0, 0, 0, 0.2);
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+      }
+      button:hover:not(:disabled) {
+        background: linear-gradient(
+          to bottom,
+          var(--wood-accent),
+          var(--wood-medium)
+        );
+        border-color: var(--wood-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 8px var(--shadow-color-dark),
+          inset 0 -1px 1px rgba(0, 0, 0, 0.1);
+      }
+      button:active:not(:disabled) {
+        transform: translateY(1px);
+        box-shadow: inset 0 2px 4px var(--shadow-color-dark);
+      }
+      /* Primary, Danger, Secondary button variations - Same as before */
+      button.primary {
+        background: linear-gradient(
+          to bottom,
+          var(--string-gold),
+          var(--wood-accent)
+        );
+        color: var(--text-dark);
+        border-color: var(--wood-medium);
+      }
+      button.primary:hover:not(:disabled) {
+        background: linear-gradient(
+          to bottom,
+          lighten(var(--string-gold), 5%),
+          lighten(var(--wood-accent), 5%)
+        );
+      }
+      button.danger {
+        background: linear-gradient(to bottom, var(--rosette-red), #601a1b);
+        border-color: #400a0b;
+      }
+      button.danger:hover:not(:disabled) {
+        background: linear-gradient(
+          to bottom,
+          lighten(var(--rosette-red), 5%),
+          var(--rosette-red)
+        );
+      }
+      button.secondary {
+        background: linear-gradient(to bottom, #b8a58a, #8c7a6a);
+        border-color: #7a6a5a;
+        color: var(--text-dark);
+      }
+      button.secondary:hover:not(:disabled) {
+        background: linear-gradient(to bottom, #c8b59a, #9c8a7a);
+      }
+      button:disabled {
+        background: #b0a9a0;
+        border-color: #918b84;
+        color: #6b6661;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+        text-shadow: none;
+        opacity: 0.6;
+      }
+      /* Icon Button Style - Same as before */
+      button.icon-button {
+        padding: 8px 10px;
+        margin-left: 5px;
+        border-radius: 6px;
+        min-width: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      button.icon-button svg {
+        width: 16px;
+        height: 16px;
+        fill: currentColor;
+        margin-right: 5px;
+      }
+      button.icon-button span {
+        display: none;
+      }
+      @media (min-width: 400px) {
+        button.icon-button span {
+          display: inline;
+        }
+      }
+
+      /* --- List Items --- */
+      .list-item {
+        /* Same as before */
+        border: 1px solid var(--border-color);
+        background-color: rgba(255, 255, 255, 0.6);
+        padding: 15px 20px;
+        margin-bottom: 12px;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        transition: background-color 0.3s, border-left 0.3s, box-shadow 0.3s;
+        box-shadow: 0 1px 3px var(--shadow-color-light);
+      }
+      .list-item:hover {
+        background-color: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 3px 6px var(--shadow-color-light);
+      }
+      .list-item-content {
+        flex-grow: 1;
+      }
+      .list-item-actions button {
+        padding: 5px 12px;
+        font-size: 0.85em;
+        border-radius: 15px;
+        margin-left: 5px;
+      }
+      .list-item.selected {
+        background-color: rgba(212, 175, 122, 0.25);
+        border-left: 6px solid var(--string-gold);
+        padding-left: 14px;
+        box-shadow: 0 3px 6px var(--shadow-color-light);
+      }
+      .list-item strong {
+        font-size: 1.2em;
+        color: var(--wood-dark);
+        font-weight: 700;
+        font-family: var(--font-headings);
+      }
+      .list-item em {
+        font-size: 0.9em;
+        color: var(--wood-medium);
+        display: block;
+        margin-top: 4px;
+        font-style: normal;
+      }
+      .list-item-actions .edit-button {
+        background: var(--wood-accent);
+        border-color: var(--wood-medium);
+        color: var(--text-dark);
+      }
+      .list-item-actions .edit-button:hover:not(:disabled) {
+        background: lighten(var(--wood-accent), 5%);
+      }
+
+      /* --- Section Management & Form --- */
+      #section-management {
+        display: none;
+      }
+      #section-list {
+        margin-top: 20px;
+        max-height: 450px;
+        overflow-y: auto;
+        padding-right: 10px;
+      }
+      #add-section-form {
+        border-top: 1px dashed var(--border-color);
+        margin-top: 25px;
+        padding-top: 25px;
+        transition: background-color 0.3s;
+      }
+      #add-section-form.editing {
+        background-color: rgba(212, 175, 122, 0.1);
+        padding: 20px;
+        margin: 20px -30px -30px -30px;
+        border-radius: 0 0 12px 12px;
+        border-top: 1px solid var(--wood-accent);
+      }
+      #add-section-form h3 {
+        margin-top: 0;
+      } /* Adjust heading margin inside form */
+
+      /* --- Practice Area --- */
+      #practice-area-wrapper {
+        display: none;
+      }
+      #practice-area {
+        /* Same as before */
+        background-color: rgba(224, 214, 199, 0.4);
+        padding: 30px;
+        border-radius: 12px;
+        border: 1px solid var(--wood-accent);
+        box-shadow: 0 5px 15px var(--shadow-color-dark),
+          inset 0 0 50px rgba(58, 31, 29, 0.05);
+      }
+      .practice-display {
+        /* Same as before */
+        font-size: 1.1em;
+        margin-bottom: 25px;
+        padding: 20px;
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+      .practice-display div {
+        margin-bottom: 12px;
+      }
+      .practice-display strong {
+        display: inline-block;
+        min-width: 110px;
+        color: var(--wood-dark);
+        font-weight: 600;
+      }
+      .practice-progress-bar {
+        /* Same as before */
+        width: 100%;
+        height: 14px;
+        background-color: var(--border-color);
+        border-radius: 7px;
+        overflow: hidden;
+        margin-top: 8px;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+      }
+      .practice-progress-bar-inner {
+        /* Same as before */
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(
+          to right,
+          var(--string-gold),
+          darken(var(--string-gold), 10%)
+        );
+        transition: width 0.4s ease;
+        border-radius: 7px;
+        box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.15);
+      }
+      #pNotes {
+        /* Same as before */
+        font-style: italic;
+        color: var(--wood-medium);
+        background-color: rgba(255, 255, 255, 0.5);
+        padding: 12px;
+        border-radius: 4px;
+        margin-top: 15px;
+        display: block;
+        border-left: 4px solid var(--wood-accent);
+      }
+      #practice-controls {
+        /* Same as before */
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 30px;
+      }
+      #practice-controls button {
+        padding: 12px 30px;
+        font-size: 1.1em;
+      }
+      #completionMessage {
+        /* Same as before */
+        color: var(--success-color);
+        font-weight: 600;
+        font-size: 1.25em;
+        text-align: center;
+        margin-top: 25px;
+        background-color: rgba(95, 138, 90, 0.15);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid var(--success-color);
+      }
+
+      /* --- Error & Hidden --- */
+      .error-message {
+        /* Same as before */
+        color: var(--danger-color);
+        background-color: rgba(128, 42, 43, 0.1);
+        border: 1px solid var(--danger-color);
+        padding: 12px 15px;
+        border-radius: 6px;
+        margin-bottom: 18px;
+        font-weight: 600;
+        font-size: 0.95em;
+      }
+      .hidden {
+        display: none !important;
+      } /* Use important to ensure hiding */
+
+      /* --- Scrollbar --- */
+      /* Same as before */
+      ::-webkit-scrollbar {
+        width: 10px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--wood-light);
+        border-radius: 5px;
+        border: 1px solid var(--border-color);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--wood-accent);
+        border-radius: 5px;
+        border: 1px solid var(--wood-medium);
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--wood-medium);
+      }
+
+      /* --- SVG Icons --- */
+      .icon {
+        display: inline-block;
+        width: 1em;
+        height: 1em;
+        vertical-align: -0.15em;
+        fill: currentColor;
+      }
     </style>
-</head>
-<body>
-<!-- SVG Icons Definition -->
-<svg width="0" height="0" style="position:absolute">
-  <symbol viewBox="0 0 24 24" id="icon-play"> <path d="M8 5v14l11-7z"/> </symbol>
-  <symbol viewBox="0 0 24 24" id="icon-edit"> <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/> </symbol>
-  <symbol viewBox="0 0 24 24" id="icon-delete"> <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/> </symbol>
-  <symbol viewBox="0 0 24 24" id="icon-music-note"> <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/> </symbol>
-</svg>
+  </head>
+  <body>
+    <!-- SVG Icons Definition -->
+    <svg width="0" height="0" style="position: absolute">
+      <symbol viewBox="0 0 24 24" id="icon-play">
+        <path d="M8 5v14l11-7z" />
+      </symbol>
+      <symbol viewBox="0 0 24 24" id="icon-edit">
+        <path
+          d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+        />
+      </symbol>
+      <symbol viewBox="0 0 24 24" id="icon-delete">
+        <path
+          d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+        />
+      </symbol>
+      <symbol viewBox="0 0 24 24" id="icon-music-note">
+        <path
+          d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"
+        />
+      </symbol>
+    </svg>
 
-<div id="app-container">
-
-    <!-- Utility Bar -->
-    <div id="utility-bar">
-        <div class="utility-group"> <!-- Group Metronome Controls -->
-            <div class="utility-section">
-                <label for="metroBpm">Metronome:</label>
-                <input type="number" id="metroBpm" value="100" min="20" max="300">
-                 <select id="metroSound">
-                     <option value="click">Classic</option>
-                     <option value="woodblock">Woodblock</option>
-                     <option value="beep">Beep</option>
-                     <option value="perc">Percussive</option>
-                 </select>
-                <button id="metroToggle" onclick="toggleGlobalMetronome()">Start</button>
-                <div id="metronome-visual"></div>
-            </div>
+    <div id="app-container">
+      <!-- Utility Bar -->
+      <div id="utility-bar">
+        <div class="utility-group">
+          <!-- Group Metronome Controls -->
+          <div class="utility-section">
+            <label for="metroBpm">Metronome:</label>
+            <input type="number" id="metroBpm" value="100" min="20" max="300" />
+            <select id="metroSound">
+              <option value="click">Classic</option>
+              <option value="woodblock">Woodblock</option>
+              <option value="beep">Beep</option>
+              <option value="perc">Percussive</option>
+            </select>
+            <button id="metroToggle" onclick="toggleGlobalMetronome()">
+              Start
+            </button>
+            <div id="metronome-visual"></div>
+          </div>
         </div>
 
-        <div class="utility-group"> <!-- Group Tuner Controls -->
-            <div class="utility-section">
-                 <label>Tuner:</label>
-                 <button id="tunerToggle" onclick="toggleTuner()">Enable Mic</button>
-                 <div id="tuner-display">-- Hz | ---</div>
-                 <button id="tunerPlayBtn" onclick="playTunerNote()" class="tuner-play-btn" title="Play Detected Note" disabled>
-                     <svg class="icon"><use xlink:href="#icon-music-note"></use></svg>
-                 </button>
-            </div>
-            <div class="utility-section"> <!-- Reference Note Section -->
-                 <label for="referenceNoteSelect">Reference:</label>
-                 <select id="referenceNoteSelect">
-                     <option value="E4">High E (E4)</option>
-                     <option value="B3">B (B3)</option>
-                     <option value="G3">G (G3)</option>
-                     <option value="D3">D (D3)</option>
-                     <option value="A2">A (A2)</option>
-                     <option value="E2">Low E (E2)</option>
-                     <option value="A4">A 440Hz</option>
-                 </select>
-                 <button id="playReferenceNoteBtn" onclick="playReferenceNote()" class="play-ref-btn" title="Play Reference Note">
-                     <svg class="icon"><use xlink:href="#icon-play"></use></svg>
-                 </button>
-            </div>
+        <div class="utility-group">
+          <!-- Group Tuner Controls -->
+          <div class="utility-section">
+            <label>Tuner:</label>
+            <button id="tunerToggle" onclick="toggleTuner()">Enable Mic</button>
+            <div id="tuner-display">-- Hz | ---</div>
+            <button
+              id="tunerPlayBtn"
+              onclick="playTunerNote()"
+              class="tuner-play-btn"
+              title="Play Detected Note"
+              disabled
+            >
+              <svg class="icon"><use xlink:href="#icon-music-note"></use></svg>
+            </button>
+          </div>
+          <div class="utility-section">
+            <!-- Reference Note Section -->
+            <label for="referenceNoteSelect">Reference:</label>
+            <select id="referenceNoteSelect">
+              <option value="E4">High E (E4)</option>
+              <option value="B3">B (B3)</option>
+              <option value="G3">G (G3)</option>
+              <option value="D3">D (D3)</option>
+              <option value="A2">A (A2)</option>
+              <option value="E2">Low E (E2)</option>
+              <option value="A4">A 440Hz</option>
+            </select>
+            <button
+              id="playReferenceNoteBtn"
+              onclick="playReferenceNote()"
+              class="play-ref-btn"
+              title="Play Reference Note"
+            >
+              <svg class="icon"><use xlink:href="#icon-play"></use></svg>
+            </button>
+          </div>
         </div>
-    </div>
+      </div>
 
-    <!-- Main Content Area -->
-    <div id="main-content">
-
+      <!-- Main Content Area -->
+      <div id="main-content">
         <!-- Piece Management -->
         <div id="piece-management" class="card">
-            <h1>My Repertoire</h1>
-            <div id="global-error-message" class="error-message hidden"></div>
-            <div id="piece-list"></div>
-            <hr style="margin: 30px 0; border-color: var(--border-color);">
-            <h3>Add New Piece</h3>
-            <label for="pieceTitle">Title:</label>
-            <input type="text" id="pieceTitle" placeholder="e.g., Lágrima">
-            <label for="pieceComposer">Composer:</label>
-            <input type="text" id="pieceComposer" placeholder="e.g., Tárrega">
-            <button onclick="addPiece()" class="primary">Add Piece</button>
+          <h1>My Repertoire</h1>
+          <div id="global-error-message" class="error-message hidden"></div>
+          <div id="piece-list"></div>
+          <hr style="margin: 30px 0; border-color: var(--border-color)" />
+          <h3>Add New Piece</h3>
+          <label for="pieceTitle">Title:</label>
+          <input type="text" id="pieceTitle" placeholder="e.g., Lágrima" />
+          <label for="pieceComposer">Composer:</label>
+          <input type="text" id="pieceComposer" placeholder="e.g., Tárrega" />
+          <button onclick="addPiece()" class="primary">Add Piece</button>
         </div>
 
         <!-- Section Management -->
         <div id="section-management" class="card">
-             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                 <h2 id="currentPieceTitleDisplay" style="border-bottom: none; margin-bottom: 0;">Practice Sections</h2>
-                 <button onclick="showPieceListOnly()" class="secondary" style="margin-top: 0;">« Repertoire</button>
-             </div>
-            <p style="font-size: 0.9em; color: var(--wood-medium); margin-bottom: 15px; font-style: italic;">Target tricky passages: Define measure ranges & tempo goals for structured practice.</p>
-            <div id="section-list"></div>
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 20px;
+            "
+          >
+            <h2
+              id="currentPieceTitleDisplay"
+              style="border-bottom: none; margin-bottom: 0"
+            >
+              Practice Sections
+            </h2>
+            <button
+              onclick="showPieceListOnly()"
+              class="secondary"
+              style="margin-top: 0"
+            >
+              « Repertoire
+            </button>
+          </div>
+          <p
+            style="
+              font-size: 0.9em;
+              color: var(--wood-medium);
+              margin-bottom: 15px;
+              font-style: italic;
+            "
+          >
+            Target tricky passages: Define measure ranges & tempo goals for
+            structured practice.
+          </p>
+          <div id="section-list"></div>
 
-             <!-- Add/Edit Section Form -->
-             <div id="add-section-form">
-                 <h3 id="sectionFormTitle">Add New Section</h3>
-                 <div id="section-form-error-message" class="error-message hidden"></div> <!-- Error display for this form -->
-                 <input type="hidden" id="editingSectionId" value="">
-                 <label for="sectionLabel">Label:</label>
-                 <input type="text" id="sectionLabel" placeholder="e.g., M5-8 Arpeggio">
-                 <label for="startMeasure">Start Measure:</label>
-                 <input type="number" id="startMeasure" min="1" value="1">
-                 <label for="endMeasure">End Measure:</label>
-                 <input type="number" id="endMeasure" min="1" value="1">
-                 <label for="startTempo">Start Tempo (BPM):</label>
-                 <input type="number" id="startTempo" min="20" max="300" value="60">
-                 <label for="goalTempo">Goal Tempo (BPM):</label>
-                 <input type="number" id="goalTempo" min="20" max="300" value="100">
-                 <label for="tempoIncrement">Tempo Increment (BPM):</label>
-                 <input type="number" id="tempoIncrement" min="1" max="50" value="5">
-                 <label for="repsPerTempo">Successful Reps per Tempo:</label>
-                 <input type="number" id="repsPerTempo" min="1" max="100" value="3">
-                 <label for="sectionNotes">Practice Notes:</label>
-                 <textarea id="sectionNotes" placeholder="e.g., Focus on LH stretch, keep RH quiet"></textarea>
-                 <button id="saveSectionButton" onclick="addOrUpdateSection()">Add Section</button>
-                 <button id="cancelEditButton" onclick="cancelEditSection()" class="secondary hidden">Cancel Edit</button>
-             </div>
+          <!-- Add/Edit Section Form -->
+          <div id="add-section-form">
+            <h3 id="sectionFormTitle">Add New Section</h3>
+            <div
+              id="section-form-error-message"
+              class="error-message hidden"
+            ></div>
+            <!-- Error display for this form -->
+            <input type="hidden" id="editingSectionId" value="" />
+            <label for="sectionLabel">Label:</label>
+            <input
+              type="text"
+              id="sectionLabel"
+              placeholder="e.g., M5-8 Arpeggio"
+            />
+            <label for="startMeasure">Start Measure:</label>
+            <input type="number" id="startMeasure" min="1" value="1" />
+            <label for="endMeasure">End Measure:</label>
+            <input type="number" id="endMeasure" min="1" value="1" />
+            <label for="startTempo">Start Tempo (BPM):</label>
+            <input
+              type="number"
+              id="startTempo"
+              min="20"
+              max="300"
+              value="60"
+            />
+            <label for="goalTempo">Goal Tempo (BPM):</label>
+            <input
+              type="number"
+              id="goalTempo"
+              min="20"
+              max="300"
+              value="100"
+            />
+            <label for="tempoIncrement">Tempo Increment (BPM):</label>
+            <input
+              type="number"
+              id="tempoIncrement"
+              min="1"
+              max="50"
+              value="5"
+            />
+            <label for="repsPerTempo">Successful Reps per Tempo:</label>
+            <input
+              type="number"
+              id="repsPerTempo"
+              min="1"
+              max="100"
+              value="3"
+            />
+            <label for="sectionNotes">Practice Notes:</label>
+            <textarea
+              id="sectionNotes"
+              placeholder="e.g., Focus on LH stretch, keep RH quiet"
+            ></textarea>
+            <button id="saveSectionButton" onclick="addOrUpdateSection()">
+              Add Section
+            </button>
+            <button
+              id="cancelEditButton"
+              onclick="cancelEditSection()"
+              class="secondary hidden"
+            >
+              Cancel Edit
+            </button>
+          </div>
         </div>
 
-         <!-- Practice Area -->
-         <div id="practice-area-wrapper">
-             <div id="practice-area" class="card">
-                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                     <h2 id="practiceTitle" style="border-bottom: none; margin-bottom: 0;">Targeted Practice</h2>
-                    <button onclick="stopPracticeAndShowSections()" class="secondary" style="margin-top:0;">« Sections</button>
-                 </div>
-                <div class="practice-display">
-                    <div><strong>Piece:</strong> <span id="pPieceTitle"></span></div>
-                    <div><strong>Section:</strong> <span id="pSectionLabel"></span></div>
-                    <div><strong>Measures:</strong> <span id="pMeasures"></span></div>
-                    <div><strong>Notes:</strong> <span id="pNotes"></span></div>
-                    <hr style="margin: 15px 0; border-color: var(--border-color);">
-                    <div><strong>Tempo:</strong> <span id="pCurrentTempo"></span> BPM (Goal: <span id="pGoalTempo"></span>)</div>
-                    <div class="practice-progress-bar"> <div id="tempoProgressBar" class="practice-progress-bar-inner"></div> </div>
-                    <div><strong>Reps:</strong> <span id="pRepsCompleted"></span> / <span id="pRepsNeeded"></span></div>
-                     <div class="practice-progress-bar"> <div id="repsProgressBar" class="practice-progress-bar-inner"></div> </div>
-                    <div style="margin-top: 10px;"><strong>Status:</strong> <span id="pStatus">Idle</span></div>
-                </div>
-                 <div id="practice-controls">
-                    <button id="startStopButton" onclick="startStopPractice()" class="primary">Start</button>
-                    <button id="goodRepButton" onclick="recordGoodRep()" disabled>Good Rep!</button>
-                    <button id="resetRepButton" onclick="resetCurrentReps()" disabled class="secondary">Reset Reps</button>
-                 </div>
-                <div id="completionMessage" class="hidden"></div>
+        <!-- Practice Area -->
+        <div id="practice-area-wrapper">
+          <div id="practice-area" class="card">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+              "
+            >
+              <h2
+                id="practiceTitle"
+                style="border-bottom: none; margin-bottom: 0"
+              >
+                Targeted Practice
+              </h2>
+              <button
+                onclick="stopPracticeAndShowSections()"
+                class="secondary"
+                style="margin-top: 0"
+              >
+                « Sections
+              </button>
             </div>
-         </div>
-    </div> <!-- /main-content -->
-</div> <!-- /app-container -->
+            <div class="practice-display">
+              <div><strong>Piece:</strong> <span id="pPieceTitle"></span></div>
+              <div>
+                <strong>Section:</strong> <span id="pSectionLabel"></span>
+              </div>
+              <div><strong>Measures:</strong> <span id="pMeasures"></span></div>
+              <div><strong>Notes:</strong> <span id="pNotes"></span></div>
+              <hr style="margin: 15px 0; border-color: var(--border-color)" />
+              <div>
+                <strong>Tempo:</strong> <span id="pCurrentTempo"></span> BPM
+                (Goal: <span id="pGoalTempo"></span>)
+              </div>
+              <div class="practice-progress-bar">
+                <div
+                  id="tempoProgressBar"
+                  class="practice-progress-bar-inner"
+                ></div>
+              </div>
+              <div>
+                <strong>Reps:</strong> <span id="pRepsCompleted"></span> /
+                <span id="pRepsNeeded"></span>
+              </div>
+              <div class="practice-progress-bar">
+                <div
+                  id="repsProgressBar"
+                  class="practice-progress-bar-inner"
+                ></div>
+              </div>
+              <div style="margin-top: 10px">
+                <strong>Status:</strong> <span id="pStatus">Idle</span>
+              </div>
+            </div>
+            <div id="practice-controls">
+              <button
+                id="startStopButton"
+                onclick="startStopPractice()"
+                class="primary"
+              >
+                Start
+              </button>
+              <button id="goodRepButton" onclick="recordGoodRep()" disabled>
+                Good Rep!
+              </button>
+              <button
+                id="resetRepButton"
+                onclick="resetCurrentReps()"
+                disabled
+                class="secondary"
+              >
+                Reset Reps
+              </button>
+            </div>
+            <div id="completionMessage" class="hidden"></div>
+          </div>
+        </div>
+      </div>
+      <!-- /main-content -->
+    </div>
+    <!-- /app-container -->
 
-<script>
-    // --- State Management ---
-    // (Keep state variables as before: pieces, currentPieceIndex, etc.)
-    let pieces = []; let currentPieceIndex = -1; let currentSectionIndex = -1;
-    let editingSectionId = null; let appView = 'pieceList';
-    const storageKey = 'guitarAtelierData_v5'; // Incremented key
+    <script>
+      // --- State Management ---
+      // (Keep state variables as before: pieces, currentPieceIndex, etc.)
+      let pieces = [];
+      let currentPieceIndex = -1;
+      let currentSectionIndex = -1;
+      let editingSectionId = null;
+      let appView = "pieceList";
+      const storageKey = "guitarAtelierData_v5"; // Incremented key
 
-    // --- Audio & Utilities State ---
-    let audioContext = null;
-    let globalMetronomeState = { isRunning: false, bpm: 100, selectedSound: 'click', intervalId: null, visualElement: null, nextTickTime: 0.0, scheduleAheadTime: 0.1, lookahead: 25.0 };
-    let tunerState = { isEnabled: false, stream: null, sourceNode: null, analyserNode: null, buffer: null, animationFrameId: null, lastDetectedNote: null, lastDetectedFreq: 0 };
-    let referenceNoteOscillator = null;
-    let tunerReferenceNoteOscillator = null; // Separate oscillator for tuner note playback
+      // --- Audio & Utilities State ---
+      let audioContext = null;
+      let globalMetronomeState = {
+        isRunning: false,
+        bpm: 100,
+        selectedSound: "click",
+        intervalId: null,
+        visualElement: null,
+        nextTickTime: 0.0,
+        scheduleAheadTime: 0.1,
+        lookahead: 25.0,
+      };
+      let tunerState = {
+        isEnabled: false,
+        stream: null,
+        sourceNode: null,
+        analyserNode: null,
+        buffer: null,
+        animationFrameId: null,
+        lastDetectedNote: null,
+        lastDetectedFreq: 0,
+      };
+      let referenceNoteOscillator = null;
+      let tunerReferenceNoteOscillator = null; // Separate oscillator for tuner note playback
 
-    // --- Practice State ---
-    // (Keep practiceState as before)
-    let practiceState = { section: null, currentTempo: 0, goalTempo: 0, startTempo: 0, tempoIncrement: 0, repsPerTempo: 0, completedReps: 0, isRunning: false, isSectionComplete: false };
+      // --- Practice State ---
+      // (Keep practiceState as before)
+      let practiceState = {
+        section: null,
+        currentTempo: 0,
+        goalTempo: 0,
+        startTempo: 0,
+        tempoIncrement: 0,
+        repsPerTempo: 0,
+        completedReps: 0,
+        isRunning: false,
+        isSectionComplete: false,
+      };
 
-    // --- UI Element References ---
-    const ui = {
+      // --- UI Element References ---
+      const ui = {
         // Add new elements
-        referenceNoteSelect: document.getElementById('referenceNoteSelect'),
-        playReferenceNoteBtn: document.getElementById('playReferenceNoteBtn'),
-        sectionFormErrorMessage: document.getElementById('section-form-error-message'),
-        pieceTitleInput: document.getElementById('pieceTitle'), // Explicitly add form inputs
-        pieceComposerInput: document.getElementById('pieceComposer'),
+        referenceNoteSelect: document.getElementById("referenceNoteSelect"),
+        playReferenceNoteBtn: document.getElementById("playReferenceNoteBtn"),
+        sectionFormErrorMessage: document.getElementById(
+          "section-form-error-message"
+        ),
+        pieceTitleInput: document.getElementById("pieceTitle"), // Explicitly add form inputs
+        pieceComposerInput: document.getElementById("pieceComposer"),
         // Keep previous refs
-        metroSoundSelect: document.getElementById('metroSound'),
-        tunerPlayBtn: document.getElementById('tunerPlayBtn'),
-        addSectionForm: document.getElementById('add-section-form'),
-        sectionFormTitle: document.getElementById('sectionFormTitle'),
-        editingSectionIdInput: document.getElementById('editingSectionId'),
-        saveSectionButton: document.getElementById('saveSectionButton'),
-        cancelEditButton: document.getElementById('cancelEditButton'),
-        pPieceTitle: document.getElementById('pPieceTitle'),
-        sectionLabelInput: document.getElementById('sectionLabel'),
-        startMeasureInput: document.getElementById('startMeasure'),
-        endMeasureInput: document.getElementById('endMeasure'),
-        startTempoInput: document.getElementById('startTempo'),
-        goalTempoInput: document.getElementById('goalTempo'),
-        tempoIncrementInput: document.getElementById('tempoIncrement'),
-        repsPerTempoInput: document.getElementById('repsPerTempo'),
-        sectionNotesInput: document.getElementById('sectionNotes'),
-        pieceManagement: document.getElementById('piece-management'),
-        sectionManagement: document.getElementById('section-management'),
-        practiceAreaWrapper: document.getElementById('practice-area-wrapper'),
-        pieceList: document.getElementById('piece-list'),
-        sectionList: document.getElementById('section-list'),
-        currentPieceTitleDisplay: document.getElementById('currentPieceTitleDisplay'),
-        globalError: document.getElementById('global-error-message'),
-        metroBpmInput: document.getElementById('metroBpm'),
-        metroToggleButton: document.getElementById('metroToggle'),
-        metroVisual: document.getElementById('metronome-visual'),
-        tunerToggleButton: document.getElementById('tunerToggle'),
-        tunerDisplay: document.getElementById('tuner-display'),
-        practiceTitle: document.getElementById('practiceTitle'),
-        pSectionLabel: document.getElementById('pSectionLabel'),
-        pMeasures: document.getElementById('pMeasures'),
-        pNotes: document.getElementById('pNotes'),
-        pCurrentTempo: document.getElementById('pCurrentTempo'),
-        pGoalTempo: document.getElementById('pGoalTempo'),
-        pRepsCompleted: document.getElementById('pRepsCompleted'),
-        pRepsNeeded: document.getElementById('pRepsNeeded'),
-        pStatus: document.getElementById('pStatus'),
-        tempoProgressBar: document.getElementById('tempoProgressBar'),
-        repsProgressBar: document.getElementById('repsProgressBar'),
-        startStopButton: document.getElementById('startStopButton'),
-        goodRepButton: document.getElementById('goodRepButton'),
-        resetRepButton: document.getElementById('resetRepButton'),
-        completionMessage: document.getElementById('completionMessage'),
-    };
+        metroSoundSelect: document.getElementById("metroSound"),
+        tunerPlayBtn: document.getElementById("tunerPlayBtn"),
+        addSectionForm: document.getElementById("add-section-form"),
+        sectionFormTitle: document.getElementById("sectionFormTitle"),
+        editingSectionIdInput: document.getElementById("editingSectionId"),
+        saveSectionButton: document.getElementById("saveSectionButton"),
+        cancelEditButton: document.getElementById("cancelEditButton"),
+        pPieceTitle: document.getElementById("pPieceTitle"),
+        sectionLabelInput: document.getElementById("sectionLabel"),
+        startMeasureInput: document.getElementById("startMeasure"),
+        endMeasureInput: document.getElementById("endMeasure"),
+        startTempoInput: document.getElementById("startTempo"),
+        goalTempoInput: document.getElementById("goalTempo"),
+        tempoIncrementInput: document.getElementById("tempoIncrement"),
+        repsPerTempoInput: document.getElementById("repsPerTempo"),
+        sectionNotesInput: document.getElementById("sectionNotes"),
+        pieceManagement: document.getElementById("piece-management"),
+        sectionManagement: document.getElementById("section-management"),
+        practiceAreaWrapper: document.getElementById("practice-area-wrapper"),
+        pieceList: document.getElementById("piece-list"),
+        sectionList: document.getElementById("section-list"),
+        currentPieceTitleDisplay: document.getElementById(
+          "currentPieceTitleDisplay"
+        ),
+        globalError: document.getElementById("global-error-message"),
+        metroBpmInput: document.getElementById("metroBpm"),
+        metroToggleButton: document.getElementById("metroToggle"),
+        metroVisual: document.getElementById("metronome-visual"),
+        tunerToggleButton: document.getElementById("tunerToggle"),
+        tunerDisplay: document.getElementById("tuner-display"),
+        practiceTitle: document.getElementById("practiceTitle"),
+        pSectionLabel: document.getElementById("pSectionLabel"),
+        pMeasures: document.getElementById("pMeasures"),
+        pNotes: document.getElementById("pNotes"),
+        pCurrentTempo: document.getElementById("pCurrentTempo"),
+        pGoalTempo: document.getElementById("pGoalTempo"),
+        pRepsCompleted: document.getElementById("pRepsCompleted"),
+        pRepsNeeded: document.getElementById("pRepsNeeded"),
+        pStatus: document.getElementById("pStatus"),
+        tempoProgressBar: document.getElementById("tempoProgressBar"),
+        repsProgressBar: document.getElementById("repsProgressBar"),
+        startStopButton: document.getElementById("startStopButton"),
+        goodRepButton: document.getElementById("goodRepButton"),
+        resetRepButton: document.getElementById("resetRepButton"),
+        completionMessage: document.getElementById("completionMessage"),
+      };
 
-    // ===========================================
-    // FUNCTION DEFINITIONS
-    // ===========================================
+      // ===========================================
+      // FUNCTION DEFINITIONS
+      // ===========================================
 
-    // --- Error Handling ---
-    function displaySectionFormError(message) {
+      // --- Error Handling ---
+      function displaySectionFormError(message) {
         if (!ui.sectionFormErrorMessage) return;
         ui.sectionFormErrorMessage.textContent = message;
-        ui.sectionFormErrorMessage.classList.remove('hidden');
+        ui.sectionFormErrorMessage.classList.remove("hidden");
         console.error("Section Form Error:", message);
-    }
-    function hideSectionFormError() {
+      }
+      function hideSectionFormError() {
         if (!ui.sectionFormErrorMessage) return;
-        ui.sectionFormErrorMessage.classList.add('hidden');
-        ui.sectionFormErrorMessage.textContent = '';
-    }
-    // Modified displayError to use the specific section form error display when not global
-    function displayError(message, isGlobal = true) {
+        ui.sectionFormErrorMessage.classList.add("hidden");
+        ui.sectionFormErrorMessage.textContent = "";
+      }
+      // Modified displayError to use the specific section form error display when not global
+      function displayError(message, isGlobal = true) {
         const target = isGlobal ? ui.globalError : ui.sectionFormErrorMessage; // Use specific target for form errors
-        if (!target) { console.error("Error Display Failed (No Target):", message); return; }
-        if (isGlobal && ui.globalError) ui.globalError.classList.remove('hidden');
+        if (!target) {
+          console.error("Error Display Failed (No Target):", message);
+          return;
+        }
+        if (isGlobal && ui.globalError)
+          ui.globalError.classList.remove("hidden");
 
         target.textContent = message;
-        target.classList.remove('hidden');
-        target.classList.add('error-message'); // Ensure styling
-        if (target === ui.completionMessage) { /* Style completion message errors if needed */ }
+        target.classList.remove("hidden");
+        target.classList.add("error-message"); // Ensure styling
+        if (target === ui.completionMessage) {
+          /* Style completion message errors if needed */
+        }
         console.error("Error:", message);
-        if (ui.globalError && isGlobal) ui.globalError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        else if (ui.sectionFormErrorMessage && !isGlobal) ui.sectionFormErrorMessage.scrollIntoView({behavior: 'smooth', block: 'center'});
-    }
-    // hideError remains the same - defaults to global
-     function hideError(isGlobal = true) { const target = isGlobal ? ui.globalError : ui.sectionFormErrorMessage; if (!target) return; target.classList.add('hidden'); target.classList.remove('error-message'); target.textContent = ''; }
+        if (ui.globalError && isGlobal)
+          ui.globalError.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        else if (ui.sectionFormErrorMessage && !isGlobal)
+          ui.sectionFormErrorMessage.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+      }
+      // hideError remains the same - defaults to global
+      function hideError(isGlobal = true) {
+        const target = isGlobal ? ui.globalError : ui.sectionFormErrorMessage;
+        if (!target) return;
+        target.classList.add("hidden");
+        target.classList.remove("error-message");
+        target.textContent = "";
+      }
 
+      // --- Audio Context Management ---
+      // (Keep tryInitAudioContext and resumeAudioContext)
+      function tryInitAudioContext() {
+        if (!audioContext) {
+          try {
+            window.AudioContext =
+              window.AudioContext || window.webkitAudioContext;
+            if (!window.AudioContext)
+              throw new Error("Web Audio API not supported");
+            audioContext = new AudioContext();
+            if (audioContext.state === "suspended") {
+              console.log("AudioContext suspended.");
+            } else {
+              console.log("AudioContext initialized.");
+            }
+            hideError(true);
+          } catch (e) {
+            console.error("AudioContext init failed:", e);
+            displayError("Audio features may not work.", true);
+          }
+        }
+        return audioContext;
+      }
+      function resumeAudioContext() {
+        if (audioContext && audioContext.state === "suspended") {
+          return audioContext
+            .resume()
+            .then(() => {
+              console.log("AudioContext resumed.");
+              hideError(true);
+              return true;
+            })
+            .catch((e) => {
+              console.error("AudioContext resume failed:", e);
+              displayError("Could not enable audio.", true);
+              return false;
+            });
+        }
+        return !!tryInitAudioContext();
+      }
 
-    // --- Audio Context Management ---
-    // (Keep tryInitAudioContext and resumeAudioContext)
-    function tryInitAudioContext() { if (!audioContext) { try { window.AudioContext = window.AudioContext || window.webkitAudioContext; if (!window.AudioContext) throw new Error("Web Audio API not supported"); audioContext = new AudioContext(); if (audioContext.state === 'suspended') { console.log("AudioContext suspended."); } else { console.log("AudioContext initialized."); } hideError(true); } catch (e) { console.error("AudioContext init failed:", e); displayError("Audio features may not work.", true); } } return audioContext; }
-    function resumeAudioContext() { if (audioContext && audioContext.state === 'suspended') { return audioContext.resume().then(() => { console.log("AudioContext resumed."); hideError(true); return true; }).catch(e => { console.error("AudioContext resume failed:", e); displayError("Could not enable audio.", true); return false; }); } return !!tryInitAudioContext(); }
+      // --- Metronome Logic (scheduleTick, scheduler, start, stop) ---
+      // (Keep previous implementation with sound selection)
+      function scheduleTick(time, visualElement) {
+        if (!audioContext) return;
+        const soundType = globalMetronomeState.selectedSound;
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        gain.connect(audioContext.destination);
+        osc.connect(gain);
+        let freq = 880,
+          decay = 0.06,
+          vol = 0.7;
+        osc.type = "sine";
+        switch (soundType) {
+          case "click":
+            osc.type = "triangle";
+            freq = 1000;
+            vol = 0.6;
+            decay = 0.04;
+            break;
+          case "woodblock":
+            osc.type = "square";
+            freq = 600;
+            vol = 0.5;
+            decay = 0.08;
+            gain.gain.setValueAtTime(vol, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + decay * 0.5);
+            osc.disconnect();
+            break;
+          case "perc":
+            const bufferSize = audioContext.sampleRate * 0.05;
+            const noiseBuffer = audioContext.createBuffer(
+              1,
+              bufferSize,
+              audioContext.sampleRate
+            );
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+              output[i] = Math.random() * 2 - 1;
+            }
+            const noiseSource = audioContext.createBufferSource();
+            noiseSource.buffer = noiseBuffer;
+            noiseSource.connect(gain);
+            gain.gain.setValueAtTime(0.4, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.03);
+            noiseSource.start(time);
+            osc.disconnect();
+            break;
+          case "beep":
+          default:
+            freq = 880;
+            vol = 0.7;
+            decay = 0.06;
+            osc.type = "sine";
+            break;
+        }
+        if (soundType !== "perc" && soundType !== "woodblock") {
+          osc.frequency.setValueAtTime(freq, time);
+          gain.gain.setValueAtTime(vol, time);
+          gain.gain.exponentialRampToValueAtTime(0.001, time + decay);
+          osc.start(time);
+          osc.stop(time + decay);
+        }
+        const delay = (time - audioContext.currentTime) * 1000;
+        setTimeout(
+          () => {
+            const isAnyMetronomeRunning =
+              globalMetronomeState.isRunning || practiceState.isRunning;
+            if (isAnyMetronomeRunning && visualElement) {
+              visualElement.classList.add("beat");
+              setTimeout(() => {
+                if (visualElement) visualElement.classList.remove("beat");
+              }, 90);
+            } else if (visualElement) {
+              visualElement.classList.remove("beat");
+            }
+          },
+          delay > 0 ? delay : 0
+        );
+      }
+      function metronomeScheduler() {
+        const state = globalMetronomeState;
+        const bpm = practiceState.isRunning
+          ? practiceState.currentTempo
+          : state.bpm;
+        const visualElement = state.visualElement;
+        if (
+          !audioContext ||
+          !(state.isRunning || practiceState.isRunning) ||
+          !visualElement
+        )
+          return;
+        while (
+          state.nextTickTime <
+          audioContext.currentTime + state.scheduleAheadTime
+        ) {
+          scheduleTick(state.nextTickTime, visualElement);
+          const secondsPerBeat = 60.0 / bpm;
+          state.nextTickTime += secondsPerBeat;
+        }
+      }
+      function startMetronome(bpm) {
+        if (!audioContext) {
+          displayError("Audio not available.", true);
+          return;
+        }
+        if (globalMetronomeState.intervalId)
+          clearInterval(globalMetronomeState.intervalId);
+        const currentBpm = bpm || globalMetronomeState.bpm;
+        globalMetronomeState.nextTickTime = audioContext.currentTime + 0.1;
+        if (!globalMetronomeState.visualElement)
+          globalMetronomeState.visualElement = ui.metroVisual;
+        metronomeScheduler();
+        globalMetronomeState.intervalId = setInterval(
+          metronomeScheduler,
+          globalMetronomeState.lookahead
+        );
+        console.log(
+          `Metronome started: ${currentBpm} BPM, Sound: ${globalMetronomeState.selectedSound}`
+        );
+      }
+      function stopMetronome() {
+        if (globalMetronomeState.intervalId) {
+          clearInterval(globalMetronomeState.intervalId);
+          globalMetronomeState.intervalId = null;
+        }
+        const visualElement = globalMetronomeState.visualElement;
+        if (visualElement) {
+          visualElement.classList.remove("beat");
+          if (!practiceState.isRunning) visualElement.style.opacity = "0.6";
+        }
+        console.log("Metronome stopped");
+      }
 
+      // --- Global Metronome Control ---
+      // (Keep toggleGlobalMetronome and listeners, ensure save data)
+      function toggleGlobalMetronome() {
+        if (!resumeAudioContext()) {
+          displayError("Audio not ready.", true);
+          return;
+        }
+        if (practiceState.isRunning) {
+          displayError("Metronome controlled by Practice.", true);
+          return;
+        }
+        globalMetronomeState.isRunning = !globalMetronomeState.isRunning;
+        if (globalMetronomeState.isRunning) {
+          globalMetronomeState.bpm = Math.max(
+            20,
+            Math.min(300, parseInt(ui.metroBpmInput.value) || 100)
+          );
+          globalMetronomeState.selectedSound =
+            ui.metroSoundSelect.value || "click";
+          ui.metroBpmInput.value = globalMetronomeState.bpm;
+          saveData();
+          startMetronome(globalMetronomeState.bpm);
+          ui.metroToggleButton.textContent = "Stop";
+          if (globalMetronomeState.visualElement)
+            globalMetronomeState.visualElement.style.opacity = "1";
+        } else {
+          stopMetronome();
+          ui.metroToggleButton.textContent = "Start";
+        }
+      }
+      ui.metroSoundSelect?.addEventListener("change", () => {
+        globalMetronomeState.selectedSound =
+          ui.metroSoundSelect.value || "click";
+        saveData();
+        if (globalMetronomeState.isRunning && !practiceState.isRunning) {
+          stopMetronome();
+          startMetronome(globalMetronomeState.bpm);
+        }
+      });
+      ui.metroBpmInput?.addEventListener("change", () => {
+        let newBpm = Math.max(
+          20,
+          Math.min(300, parseInt(ui.metroBpmInput.value) || 100)
+        );
+        ui.metroBpmInput.value = newBpm;
+        globalMetronomeState.bpm = newBpm;
+        saveData();
+        if (globalMetronomeState.isRunning && !practiceState.isRunning) {
+          stopMetronome();
+          startMetronome(globalMetronomeState.bpm);
+        }
+      });
 
-    // --- Metronome Logic (scheduleTick, scheduler, start, stop) ---
-    // (Keep previous implementation with sound selection)
-    function scheduleTick(time, visualElement) { if (!audioContext) return; const soundType = globalMetronomeState.selectedSound; const osc = audioContext.createOscillator(); const gain = audioContext.createGain(); gain.connect(audioContext.destination); osc.connect(gain); let freq = 880, decay = 0.06, vol = 0.7; osc.type = 'sine'; switch (soundType) { case 'click': osc.type = 'triangle'; freq = 1000; vol = 0.6; decay = 0.04; break; case 'woodblock': osc.type = 'square'; freq = 600; vol = 0.5; decay = 0.08; gain.gain.setValueAtTime(vol, time); gain.gain.exponentialRampToValueAtTime(0.001, time + decay * 0.5); osc.disconnect(); break; case 'perc': const bufferSize = audioContext.sampleRate * 0.05; const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate); const output = noiseBuffer.getChannelData(0); for (let i = 0; i < bufferSize; i++) { output[i] = Math.random() * 2 - 1; } const noiseSource = audioContext.createBufferSource(); noiseSource.buffer = noiseBuffer; noiseSource.connect(gain); gain.gain.setValueAtTime(0.4, time); gain.gain.exponentialRampToValueAtTime(0.001, time + 0.03); noiseSource.start(time); osc.disconnect(); break; case 'beep': default: freq = 880; vol = 0.7; decay = 0.06; osc.type = 'sine'; break; } if (soundType !== 'perc' && soundType !== 'woodblock') { osc.frequency.setValueAtTime(freq, time); gain.gain.setValueAtTime(vol, time); gain.gain.exponentialRampToValueAtTime(0.001, time + decay); osc.start(time); osc.stop(time + decay); } const delay = (time - audioContext.currentTime) * 1000; setTimeout(() => { const isAnyMetronomeRunning = globalMetronomeState.isRunning || practiceState.isRunning; if (isAnyMetronomeRunning && visualElement) { visualElement.classList.add('beat'); setTimeout(() => { if (visualElement) visualElement.classList.remove('beat'); }, 90); } else if (visualElement) { visualElement.classList.remove('beat'); } }, delay > 0 ? delay : 0); }
-    function metronomeScheduler() { const state = globalMetronomeState; const bpm = practiceState.isRunning ? practiceState.currentTempo : state.bpm; const visualElement = state.visualElement; if (!audioContext || !(state.isRunning || practiceState.isRunning) || !visualElement) return; while (state.nextTickTime < audioContext.currentTime + state.scheduleAheadTime) { scheduleTick(state.nextTickTime, visualElement); const secondsPerBeat = 60.0 / bpm; state.nextTickTime += secondsPerBeat; } }
-    function startMetronome(bpm) { if (!audioContext) { displayError("Audio not available.", true); return; } if (globalMetronomeState.intervalId) clearInterval(globalMetronomeState.intervalId); const currentBpm = bpm || globalMetronomeState.bpm; globalMetronomeState.nextTickTime = audioContext.currentTime + 0.1; if (!globalMetronomeState.visualElement) globalMetronomeState.visualElement = ui.metroVisual; metronomeScheduler(); globalMetronomeState.intervalId = setInterval(metronomeScheduler, globalMetronomeState.lookahead); console.log(`Metronome started: ${currentBpm} BPM, Sound: ${globalMetronomeState.selectedSound}`); }
-    function stopMetronome() { if (globalMetronomeState.intervalId) { clearInterval(globalMetronomeState.intervalId); globalMetronomeState.intervalId = null; } const visualElement = globalMetronomeState.visualElement; if (visualElement) { visualElement.classList.remove('beat'); if (!practiceState.isRunning) visualElement.style.opacity = '0.6'; } console.log("Metronome stopped"); }
+      // --- Tuner Logic (Mic + Reference Tones) ---
+      // (Keep constants, noteFromPitch, centsOffFromPitch, findFundamentalFreq)
+      const A4_TUNER = 440;
+      const noteStrings_TUNER = [
+        "C",
+        "C#",
+        "D",
+        "D#",
+        "E",
+        "F",
+        "F#",
+        "G",
+        "G#",
+        "A",
+        "A#",
+        "B",
+      ];
+      const C0_TUNER = A4_TUNER * Math.pow(2, -4.75);
+      function noteFromPitch(frequency) {
+        if (frequency <= 0) return { note: "---", octave: "" };
+        const halfSteps = Math.round(12 * Math.log2(frequency / C0_TUNER));
+        const octave = Math.floor(halfSteps / 12);
+        const noteIndex = ((halfSteps % 12) + 12) % 12;
+        return { note: noteStrings_TUNER[noteIndex], octave: octave };
+      }
+      function centsOffFromPitch(frequency, targetFrequency) {
+        if (frequency <= 0 || targetFrequency <= 0) return 0;
+        return Math.floor(1200 * Math.log2(frequency / targetFrequency));
+      }
+      function findFundamentalFreq(buffer, sampleRate) {
+        const SIZE = buffer.length;
+        const threshold = 0.15;
+        const minPeriod = Math.floor(sampleRate / 1300);
+        const maxPeriod = Math.floor(sampleRate / 60);
+        let bestPeriod = 0;
+        const diffs = new Float32Array(maxPeriod);
+        for (let tau = minPeriod; tau < maxPeriod; tau++) {
+          let sqDiff = 0;
+          for (let i = 0; i < SIZE - tau; i++) {
+            const delta = buffer[i] - buffer[i + tau];
+            sqDiff += delta * delta;
+          }
+          diffs[tau] = sqDiff;
+        }
+        let runningSum = 0;
+        diffs[0] = 1;
+        for (let tau = 1; tau < maxPeriod; tau++) {
+          runningSum += diffs[tau];
+          if (runningSum === 0) diffs[tau] = 1;
+          else diffs[tau] *= tau / runningSum;
+        }
+        for (let tau = minPeriod; tau < maxPeriod; tau++) {
+          if (diffs[tau] < threshold) {
+            while (tau + 1 < maxPeriod && diffs[tau + 1] < diffs[tau]) tau++;
+            bestPeriod = tau;
+            if (bestPeriod > minPeriod && bestPeriod < maxPeriod - 1) {
+              const y1 = diffs[bestPeriod - 1];
+              const y2 = diffs[bestPeriod];
+              const y3 = diffs[bestPeriod + 1];
+              const d = y3 - y1;
+              const divisor = 2 * (2 * y2 - y1 - y3);
+              if (divisor !== 0) {
+                const adjustment = d / divisor;
+                if (Math.abs(adjustment) < 1) bestPeriod += adjustment;
+              }
+            }
+            break;
+          }
+        }
+        if (bestPeriod > 0) return sampleRate / bestPeriod;
+        return -1;
+      }
 
-
-    // --- Global Metronome Control ---
-    // (Keep toggleGlobalMetronome and listeners, ensure save data)
-     function toggleGlobalMetronome() { if (!resumeAudioContext()) { displayError("Audio not ready.", true); return; } if (practiceState.isRunning) { displayError("Metronome controlled by Practice.", true); return; } globalMetronomeState.isRunning = !globalMetronomeState.isRunning; if (globalMetronomeState.isRunning) { globalMetronomeState.bpm = Math.max(20, Math.min(300, parseInt(ui.metroBpmInput.value) || 100)); globalMetronomeState.selectedSound = ui.metroSoundSelect.value || 'click'; ui.metroBpmInput.value = globalMetronomeState.bpm; saveData(); startMetronome(globalMetronomeState.bpm); ui.metroToggleButton.textContent = 'Stop'; if(globalMetronomeState.visualElement) globalMetronomeState.visualElement.style.opacity = '1'; } else { stopMetronome(); ui.metroToggleButton.textContent = 'Start'; } }
-     ui.metroSoundSelect?.addEventListener('change', () => { globalMetronomeState.selectedSound = ui.metroSoundSelect.value || 'click'; saveData(); if (globalMetronomeState.isRunning && !practiceState.isRunning) { stopMetronome(); startMetronome(globalMetronomeState.bpm); } });
-     ui.metroBpmInput?.addEventListener('change', () => { let newBpm = Math.max(20, Math.min(300, parseInt(ui.metroBpmInput.value) || 100)); ui.metroBpmInput.value = newBpm; globalMetronomeState.bpm = newBpm; saveData(); if (globalMetronomeState.isRunning && !practiceState.isRunning) { stopMetronome(); startMetronome(globalMetronomeState.bpm); } });
-
-
-    // --- Tuner Logic (Mic + Reference Tones) ---
-    // (Keep constants, noteFromPitch, centsOffFromPitch, findFundamentalFreq)
-     const A4_TUNER = 440; const noteStrings_TUNER = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]; const C0_TUNER = A4_TUNER * Math.pow(2, -4.75);
-     function noteFromPitch(frequency) { if (frequency <= 0) return { note: "---", octave: "" }; const halfSteps = Math.round(12 * Math.log2(frequency / C0_TUNER)); const octave = Math.floor(halfSteps / 12); const noteIndex = (halfSteps % 12 + 12) % 12; return { note: noteStrings_TUNER[noteIndex], octave: octave }; }
-     function centsOffFromPitch(frequency, targetFrequency) { if (frequency <= 0 || targetFrequency <= 0) return 0; return Math.floor(1200 * Math.log2(frequency / targetFrequency)); }
-     function findFundamentalFreq(buffer, sampleRate) { const SIZE = buffer.length; const threshold = 0.15; const minPeriod = Math.floor(sampleRate / 1300); const maxPeriod = Math.floor(sampleRate / 60); let bestPeriod = 0; const diffs = new Float32Array(maxPeriod); for (let tau = minPeriod; tau < maxPeriod; tau++) { let sqDiff = 0; for (let i = 0; i < SIZE - tau; i++) { const delta = buffer[i] - buffer[i + tau]; sqDiff += delta * delta; } diffs[tau] = sqDiff; } let runningSum = 0; diffs[0] = 1; for (let tau = 1; tau < maxPeriod; tau++) { runningSum += diffs[tau]; if (runningSum === 0) diffs[tau] = 1; else diffs[tau] *= tau / runningSum; } for (let tau = minPeriod; tau < maxPeriod; tau++) { if (diffs[tau] < threshold) { while (tau + 1 < maxPeriod && diffs[tau + 1] < diffs[tau]) tau++; bestPeriod = tau; if (bestPeriod > minPeriod && bestPeriod < maxPeriod - 1) { const y1 = diffs[bestPeriod - 1]; const y2 = diffs[bestPeriod]; const y3 = diffs[bestPeriod + 1]; const d = (y3 - y1); const divisor = (2 * (2 * y2 - y1 - y3)); if(divisor !== 0) { const adjustment = d / divisor; if (Math.abs(adjustment) < 1) bestPeriod += adjustment; } } break; } } if (bestPeriod > 0) return sampleRate / bestPeriod; return -1; }
-
-    function updateTuner() {
+      function updateTuner() {
         // (Keep previous logic, ensure tunerPlayBtn disable/enable works)
-         if (!tunerState.isEnabled || !tunerState.analyserNode || !tunerState.buffer || !audioContext) { tunerState.animationFrameId = null; return; }
-         tunerState.analyserNode.getFloatTimeDomainData(tunerState.buffer); const fundamentalFreq = findFundamentalFreq(tunerState.buffer, audioContext.sampleRate); let currentNoteDetected = false;
-         if (fundamentalFreq > 0) { const { note, octave } = noteFromPitch(fundamentalFreq); if (note !== "---") { const targetFreq = C0_TUNER * Math.pow(2, (octave * 12 + noteStrings_TUNER.indexOf(note)) / 12); const cents = centsOffFromPitch(fundamentalFreq, targetFreq); tunerState.lastDetectedNote = { note, octave }; tunerState.lastDetectedFreq = targetFreq; currentNoteDetected = true; if (ui.tunerDisplay) { const absCents = Math.abs(cents); let tuningClass = ''; if (absCents < 5) tuningClass = 'tuner-in-tune'; else if (cents > 0) tuningClass = 'tuner-sharp'; else tuningClass = 'tuner-flat'; ui.tunerDisplay.innerHTML = `<span class="tuner-note">${note}${octave}</span><span class="tuner-cents ${tuningClass}">${cents >= 0 ? '+' : ''}${cents} cents</span>`; ui.tunerDisplay.style.borderColor = absCents < 5 ? 'var(--success-color)' : 'var(--string-gold)'; } } }
-         if (!currentNoteDetected) { tunerState.lastDetectedNote = null; tunerState.lastDetectedFreq = 0; if (ui.tunerDisplay) { ui.tunerDisplay.textContent = "---"; ui.tunerDisplay.style.borderColor = 'transparent'; } }
-         if (ui.tunerPlayBtn) ui.tunerPlayBtn.disabled = !currentNoteDetected; // Enable/disable based on detection
-         tunerState.animationFrameId = requestAnimationFrame(updateTuner);
-    }
-    function startTuner() {
+        if (
+          !tunerState.isEnabled ||
+          !tunerState.analyserNode ||
+          !tunerState.buffer ||
+          !audioContext
+        ) {
+          tunerState.animationFrameId = null;
+          return;
+        }
+        tunerState.analyserNode.getFloatTimeDomainData(tunerState.buffer);
+        const fundamentalFreq = findFundamentalFreq(
+          tunerState.buffer,
+          audioContext.sampleRate
+        );
+        let currentNoteDetected = false;
+        if (fundamentalFreq > 0) {
+          const { note, octave } = noteFromPitch(fundamentalFreq);
+          if (note !== "---") {
+            const targetFreq =
+              C0_TUNER *
+              Math.pow(2, (octave * 12 + noteStrings_TUNER.indexOf(note)) / 12);
+            const cents = centsOffFromPitch(fundamentalFreq, targetFreq);
+            tunerState.lastDetectedNote = { note, octave };
+            tunerState.lastDetectedFreq = targetFreq;
+            currentNoteDetected = true;
+            if (ui.tunerDisplay) {
+              const absCents = Math.abs(cents);
+              let tuningClass = "";
+              if (absCents < 5) tuningClass = "tuner-in-tune";
+              else if (cents > 0) tuningClass = "tuner-sharp";
+              else tuningClass = "tuner-flat";
+              ui.tunerDisplay.innerHTML = `<span class="tuner-note">${note}${octave}</span><span class="tuner-cents ${tuningClass}">${
+                cents >= 0 ? "+" : ""
+              }${cents} cents</span>`;
+              ui.tunerDisplay.style.borderColor =
+                absCents < 5 ? "var(--success-color)" : "var(--string-gold)";
+            }
+          }
+        }
+        if (!currentNoteDetected) {
+          tunerState.lastDetectedNote = null;
+          tunerState.lastDetectedFreq = 0;
+          if (ui.tunerDisplay) {
+            ui.tunerDisplay.textContent = "---";
+            ui.tunerDisplay.style.borderColor = "transparent";
+          }
+        }
+        if (ui.tunerPlayBtn) ui.tunerPlayBtn.disabled = !currentNoteDetected; // Enable/disable based on detection
+        tunerState.animationFrameId = requestAnimationFrame(updateTuner);
+      }
+      function startTuner() {
         // (Keep previous logic)
-         if (!resumeAudioContext()) { displayError("Audio system not ready.", true); return Promise.reject("Audio failed"); } if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { displayError("Mic access not supported.", true); return Promise.reject("No getUserMedia"); } return navigator.mediaDevices.getUserMedia({ audio: { noiseSuppression: true, echoCancellation: false } }).then(stream => { tunerState.stream = stream; tunerState.sourceNode = audioContext.createMediaStreamSource(stream); tunerState.analyserNode = audioContext.createAnalyser(); tunerState.analyserNode.fftSize = 4096; tunerState.analyserNode.smoothingTimeConstant = 0.8; tunerState.buffer = new Float32Array(tunerState.analyserNode.fftSize); tunerState.sourceNode.connect(tunerState.analyserNode); tunerState.isEnabled = true; if(ui.tunerToggleButton) { ui.tunerToggleButton.textContent = 'Disable Mic'; ui.tunerToggleButton.classList.add('danger'); } if(ui.tunerPlayBtn) ui.tunerPlayBtn.disabled = true; hideError(true); if (!tunerState.animationFrameId) updateTuner(); }).catch(err => { console.error("Mic error:", err); let msg="Mic error."; if(err.name === 'NotAllowedError') msg="Mic permission denied."; else if(err.name==='NotFoundError') msg="No mic found."; else msg=`Tuner error: ${err.name}.`; displayError(msg, true); stopTuner(); });
-    }
-    function stopTuner() {
+        if (!resumeAudioContext()) {
+          displayError("Audio system not ready.", true);
+          return Promise.reject("Audio failed");
+        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          displayError("Mic access not supported.", true);
+          return Promise.reject("No getUserMedia");
+        }
+        return navigator.mediaDevices
+          .getUserMedia({
+            audio: { noiseSuppression: true, echoCancellation: false },
+          })
+          .then((stream) => {
+            tunerState.stream = stream;
+            tunerState.sourceNode =
+              audioContext.createMediaStreamSource(stream);
+            tunerState.analyserNode = audioContext.createAnalyser();
+            tunerState.analyserNode.fftSize = 4096;
+            tunerState.analyserNode.smoothingTimeConstant = 0.8;
+            tunerState.buffer = new Float32Array(
+              tunerState.analyserNode.fftSize
+            );
+            tunerState.sourceNode.connect(tunerState.analyserNode);
+            tunerState.isEnabled = true;
+            if (ui.tunerToggleButton) {
+              ui.tunerToggleButton.textContent = "Disable Mic";
+              ui.tunerToggleButton.classList.add("danger");
+            }
+            if (ui.tunerPlayBtn) ui.tunerPlayBtn.disabled = true;
+            hideError(true);
+            if (!tunerState.animationFrameId) updateTuner();
+          })
+          .catch((err) => {
+            console.error("Mic error:", err);
+            let msg = "Mic error.";
+            if (err.name === "NotAllowedError") msg = "Mic permission denied.";
+            else if (err.name === "NotFoundError") msg = "No mic found.";
+            else msg = `Tuner error: ${err.name}.`;
+            displayError(msg, true);
+            stopTuner();
+          });
+      }
+      function stopTuner() {
         // (Keep previous logic, ensure tunerReferenceNoteOscillator is also stopped)
-        if (tunerReferenceNoteOscillator) { try { tunerReferenceNoteOscillator.stop(); } catch(e){} tunerReferenceNoteOscillator = null; }
-        if (referenceNoteOscillator) { try { referenceNoteOscillator.stop(); } catch(e){} referenceNoteOscillator = null; } // Stop general ref note too if tuner stops
-        if (tunerState.animationFrameId) cancelAnimationFrame(tunerState.animationFrameId); tunerState.animationFrameId = null; if (tunerState.stream) tunerState.stream.getTracks().forEach(track => track.stop()); tunerState.stream = null; if (tunerState.sourceNode) { try { tunerState.sourceNode.disconnect(); } catch(e){} tunerState.sourceNode = null; } tunerState.analyserNode = null; tunerState.buffer = null; tunerState.isEnabled = false; tunerState.lastDetectedNote = null; tunerState.lastDetectedFreq = 0; if(ui.tunerToggleButton) { ui.tunerToggleButton.textContent = 'Enable Mic'; ui.tunerToggleButton.classList.remove('danger'); } if(ui.tunerPlayBtn) ui.tunerPlayBtn.disabled = true; if(ui.tunerDisplay) { ui.tunerDisplay.textContent = "-- Hz | ---"; ui.tunerDisplay.style.borderColor = 'transparent'; }
-    }
-     function toggleTuner() { if (tunerState.isEnabled) stopTuner(); else startTuner(); }
+        if (tunerReferenceNoteOscillator) {
+          try {
+            tunerReferenceNoteOscillator.stop();
+          } catch (e) {}
+          tunerReferenceNoteOscillator = null;
+        }
+        if (referenceNoteOscillator) {
+          try {
+            referenceNoteOscillator.stop();
+          } catch (e) {}
+          referenceNoteOscillator = null;
+        } // Stop general ref note too if tuner stops
+        if (tunerState.animationFrameId)
+          cancelAnimationFrame(tunerState.animationFrameId);
+        tunerState.animationFrameId = null;
+        if (tunerState.stream)
+          tunerState.stream.getTracks().forEach((track) => track.stop());
+        tunerState.stream = null;
+        if (tunerState.sourceNode) {
+          try {
+            tunerState.sourceNode.disconnect();
+          } catch (e) {}
+          tunerState.sourceNode = null;
+        }
+        tunerState.analyserNode = null;
+        tunerState.buffer = null;
+        tunerState.isEnabled = false;
+        tunerState.lastDetectedNote = null;
+        tunerState.lastDetectedFreq = 0;
+        if (ui.tunerToggleButton) {
+          ui.tunerToggleButton.textContent = "Enable Mic";
+          ui.tunerToggleButton.classList.remove("danger");
+        }
+        if (ui.tunerPlayBtn) ui.tunerPlayBtn.disabled = true;
+        if (ui.tunerDisplay) {
+          ui.tunerDisplay.textContent = "-- Hz | ---";
+          ui.tunerDisplay.style.borderColor = "transparent";
+        }
+      }
+      function toggleTuner() {
+        if (tunerState.isEnabled) stopTuner();
+        else startTuner();
+      }
 
-    function playTunerNote() { // Plays the *detected* note
+      function playTunerNote() {
+        // Plays the *detected* note
         if (!tunerState.lastDetectedFreq || !audioContext) return;
-        if (!resumeAudioContext()) { displayError("Audio not ready.", true); return; }
-        if (tunerReferenceNoteOscillator) { try { tunerReferenceNoteOscillator.stop(); } catch(e){} }
+        if (!resumeAudioContext()) {
+          displayError("Audio not ready.", true);
+          return;
+        }
+        if (tunerReferenceNoteOscillator) {
+          try {
+            tunerReferenceNoteOscillator.stop();
+          } catch (e) {}
+        }
 
         tunerReferenceNoteOscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
-        tunerReferenceNoteOscillator.frequency.setValueAtTime(tunerState.lastDetectedFreq, audioContext.currentTime);
-        tunerReferenceNoteOscillator.type = 'sine';
+        tunerReferenceNoteOscillator.frequency.setValueAtTime(
+          tunerState.lastDetectedFreq,
+          audioContext.currentTime
+        );
+        tunerReferenceNoteOscillator.type = "sine";
         gainNode.gain.setValueAtTime(0.6, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.8);
-        tunerReferenceNoteOscillator.connect(gainNode); gainNode.connect(audioContext.destination);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.001,
+          audioContext.currentTime + 0.8
+        );
+        tunerReferenceNoteOscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
         tunerReferenceNoteOscillator.start(audioContext.currentTime);
         tunerReferenceNoteOscillator.stop(audioContext.currentTime + 1);
-        tunerReferenceNoteOscillator.onended = () => { tunerReferenceNoteOscillator = null; };
-    }
+        tunerReferenceNoteOscillator.onended = () => {
+          tunerReferenceNoteOscillator = null;
+        };
+      }
 
-    // New function to play selected reference note
-    function playReferenceNote() {
+      // New function to play selected reference note
+      function playReferenceNote() {
         if (!ui.referenceNoteSelect || !audioContext) return;
-        if (!resumeAudioContext()) { displayError("Audio not ready.", true); return; }
-        if (referenceNoteOscillator) { try { referenceNoteOscillator.stop(); } catch(e){} }
+        if (!resumeAudioContext()) {
+          displayError("Audio not ready.", true);
+          return;
+        }
+        if (referenceNoteOscillator) {
+          try {
+            referenceNoteOscillator.stop();
+          } catch (e) {}
+        }
 
         const selectedNote = ui.referenceNoteSelect.value;
         let frequency = 0;
 
         // Standard Tuning Frequencies (approx)
         const refFrequencies = {
-             'E4': 329.63, 'B3': 246.94, 'G3': 196.00,
-             'D3': 146.83, 'A2': 110.00, 'E2': 82.41, 'A4': 440.00
+          E4: 329.63,
+          B3: 246.94,
+          G3: 196.0,
+          D3: 146.83,
+          A2: 110.0,
+          E2: 82.41,
+          A4: 440.0,
         };
 
-        frequency = refFrequencies[selectedNote] || 440.00; // Default to A4 if not found
+        frequency = refFrequencies[selectedNote] || 440.0; // Default to A4 if not found
 
         referenceNoteOscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
-        referenceNoteOscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
-        referenceNoteOscillator.type = 'sine';
+        referenceNoteOscillator.frequency.setValueAtTime(
+          frequency,
+          audioContext.currentTime
+        );
+        referenceNoteOscillator.type = "sine";
         gainNode.gain.setValueAtTime(0.6, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.8);
-        referenceNoteOscillator.connect(gainNode); gainNode.connect(audioContext.destination);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.001,
+          audioContext.currentTime + 0.8
+        );
+        referenceNoteOscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
         referenceNoteOscillator.start(audioContext.currentTime);
         referenceNoteOscillator.stop(audioContext.currentTime + 1);
-        referenceNoteOscillator.onended = () => { referenceNoteOscillator = null; };
-    }
+        referenceNoteOscillator.onended = () => {
+          referenceNoteOscillator = null;
+        };
+      }
 
+      // --- Data Persistence ---
+      // (Keep saveData and loadData, ensure they handle metroSound)
+      function saveData() {
+        try {
+          const dataToSave = {
+            pieces: pieces,
+            globalMetronomeBpm: globalMetronomeState.bpm,
+            globalMetronomeSound: globalMetronomeState.selectedSound,
+          };
+          localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+        } catch (e) {
+          console.error("Save failed:", e);
+          displayError("Could not save data.", true);
+        }
+      }
+      function loadData() {
+        try {
+          const storedData = localStorage.getItem(storageKey);
+          if (storedData) {
+            const d = JSON.parse(storedData);
+            if (Array.isArray(d.pieces)) {
+              pieces = d.pieces.filter(
+                (p) => p && typeof p === "object" && typeof p.title === "string"
+              );
+              pieces.forEach((p) => {
+                p.id = p.id || Date.now() + Math.random();
+                if (!Array.isArray(p.sections)) p.sections = [];
+                p.sections = p.sections.filter(
+                  (s) =>
+                    s && typeof s === "object" && typeof s.label === "string"
+                );
+                p.sections.forEach(
+                  (s) => (s.id = s.id || Date.now() + Math.random())
+                );
+              });
+            } else {
+              pieces = [];
+            }
+            globalMetronomeState.bpm =
+              typeof d.globalMetronomeBpm === "number" &&
+              d.globalMetronomeBpm >= 20 &&
+              d.globalMetronomeBpm <= 300
+                ? d.globalMetronomeBpm
+                : 100;
+            const validSounds = ["click", "woodblock", "beep", "perc"];
+            globalMetronomeState.selectedSound =
+              typeof d.globalMetronomeSound === "string" &&
+              validSounds.includes(d.globalMetronomeSound)
+                ? d.globalMetronomeSound
+                : "click";
+          } else {
+            pieces = [];
+            globalMetronomeState.bpm = 100;
+            globalMetronomeState.selectedSound = "click";
+          }
+        } catch (e) {
+          console.error("Load failed:", e);
+          displayError("Could not load data.", true);
+          pieces = [];
+          globalMetronomeState.bpm = 100;
+          globalMetronomeState.selectedSound = "click";
+        }
+        if (ui.metroBpmInput) ui.metroBpmInput.value = globalMetronomeState.bpm;
+        if (ui.metroSoundSelect)
+          ui.metroSoundSelect.value = globalMetronomeState.selectedSound;
+      }
 
-    // --- Data Persistence ---
-    // (Keep saveData and loadData, ensure they handle metroSound)
-     function saveData() { try { const dataToSave = { pieces: pieces, globalMetronomeBpm: globalMetronomeState.bpm, globalMetronomeSound: globalMetronomeState.selectedSound }; localStorage.setItem(storageKey, JSON.stringify(dataToSave)); } catch (e) { console.error("Save failed:", e); displayError("Could not save data.", true); } }
-     function loadData() { try { const storedData = localStorage.getItem(storageKey); if (storedData) { const d = JSON.parse(storedData); if (Array.isArray(d.pieces)) { pieces = d.pieces.filter(p => p && typeof p === 'object' && typeof p.title === 'string'); pieces.forEach(p => { p.id = p.id || Date.now() + Math.random(); if (!Array.isArray(p.sections)) p.sections = []; p.sections = p.sections.filter(s => s && typeof s === 'object' && typeof s.label === 'string'); p.sections.forEach(s => s.id = s.id || Date.now() + Math.random()); }); } else { pieces = []; } globalMetronomeState.bpm = (typeof d.globalMetronomeBpm === 'number' && d.globalMetronomeBpm >= 20 && d.globalMetronomeBpm <= 300) ? d.globalMetronomeBpm : 100; const validSounds = ['click', 'woodblock', 'beep', 'perc']; globalMetronomeState.selectedSound = (typeof d.globalMetronomeSound === 'string' && validSounds.includes(d.globalMetronomeSound)) ? d.globalMetronomeSound : 'click'; } else { pieces = []; globalMetronomeState.bpm = 100; globalMetronomeState.selectedSound = 'click'; } } catch (e) { console.error("Load failed:", e); displayError("Could not load data.", true); pieces = []; globalMetronomeState.bpm = 100; globalMetronomeState.selectedSound = 'click'; } if (ui.metroBpmInput) ui.metroBpmInput.value = globalMetronomeState.bpm; if (ui.metroSoundSelect) ui.metroSoundSelect.value = globalMetronomeState.selectedSound; }
+      // --- View Management ---
+      // (Keep setView, renderAppView, showPieceListOnly, showSectionsForPiece, stopPracticeAndShowSections)
+      function setView(view) {
+        appView = view;
+        editingSectionId = null;
+        renderAppView();
+      } // Simplified stop logic
+      function renderAppView() {
+        ui.pieceManagement.style.display = "none";
+        ui.sectionManagement.style.display = "none";
+        ui.practiceAreaWrapper.style.display = "none";
+        hideError(true);
+        cancelEditSection();
+        if (appView === "pieceList") {
+          ui.pieceManagement.style.display = "block";
+          renderPieceList();
+        } else if (appView === "sectionView") {
+          ui.pieceManagement.style.display = "block";
+          ui.sectionManagement.style.display = "block";
+          renderPieceList();
+          renderSectionList();
+        } else if (appView === "practiceView") {
+          ui.pieceManagement.style.display = "block";
+          ui.sectionManagement.style.display = "block";
+          ui.practiceAreaWrapper.style.display = "block";
+          renderPieceList();
+          renderSectionList();
+          renderPracticeArea();
+        }
+      }
+      function showPieceListOnly() {
+        currentPieceIndex = -1;
+        currentSectionIndex = -1;
+        if (practiceState.isRunning) stopPractice();
+        setView("pieceList");
+      }
+      function showSectionsForPiece(index) {
+        if (index === currentPieceIndex && appView === "sectionView") return;
+        currentPieceIndex = index;
+        currentSectionIndex = -1;
+        if (practiceState.isRunning) stopPractice();
+        setView("sectionView");
+      }
+      function stopPracticeAndShowSections() {
+        stopPractice();
+        currentSectionIndex = -1;
+        setView("sectionView");
+      }
 
-
-    // --- View Management ---
-    // (Keep setView, renderAppView, showPieceListOnly, showSectionsForPiece, stopPracticeAndShowSections)
-      function setView(view) { appView = view; editingSectionId = null; renderAppView(); } // Simplified stop logic
-      function renderAppView() { ui.pieceManagement.style.display = 'none'; ui.sectionManagement.style.display = 'none'; ui.practiceAreaWrapper.style.display = 'none'; hideError(true); cancelEditSection(); if (appView === 'pieceList') { ui.pieceManagement.style.display = 'block'; renderPieceList(); } else if (appView === 'sectionView') { ui.pieceManagement.style.display = 'block'; ui.sectionManagement.style.display = 'block'; renderPieceList(); renderSectionList(); } else if (appView === 'practiceView') { ui.pieceManagement.style.display = 'block'; ui.sectionManagement.style.display = 'block'; ui.practiceAreaWrapper.style.display = 'block'; renderPieceList(); renderSectionList(); renderPracticeArea(); } }
-      function showPieceListOnly() { currentPieceIndex = -1; currentSectionIndex = -1; if (practiceState.isRunning) stopPractice(); setView('pieceList'); }
-      function showSectionsForPiece(index) { if (index === currentPieceIndex && appView === 'sectionView') return; currentPieceIndex = index; currentSectionIndex = -1; if (practiceState.isRunning) stopPractice(); setView('sectionView'); }
-      function stopPracticeAndShowSections() { stopPractice(); currentSectionIndex = -1; setView('sectionView'); }
-
-
-    // --- Piece Management ---
-    // Updated addPiece to use ui object correctly
-    function addPiece() {
+      // --- Piece Management ---
+      // Updated addPiece to use ui object correctly
+      function addPiece() {
         // Use ui object references defined earlier
         const title = ui.pieceTitleInput.value.trim();
         const composer = ui.pieceComposerInput.value.trim(); // Use the reference
 
         if (!title) {
-            displayError("Piece title cannot be empty.", true); // Display globally
-            return;
+          displayError("Piece title cannot be empty.", true); // Display globally
+          return;
         }
         hideError(true); // Clear global error on success
 
-        pieces.push({ id: Date.now() + Math.random(), title, composer, sections: [] });
-        ui.pieceTitleInput.value = ''; // Clear using the reference
-        ui.pieceComposerInput.value = ''; // Clear using the reference
+        pieces.push({
+          id: Date.now() + Math.random(),
+          title,
+          composer,
+          sections: [],
+        });
+        ui.pieceTitleInput.value = ""; // Clear using the reference
+        ui.pieceComposerInput.value = ""; // Clear using the reference
         saveData();
         currentPieceIndex = pieces.length - 1;
-        setView('sectionView');
-    }
-    // (deletePiece, renderPieceList - keep previous implementations)
-     function deletePiece(index, event) { event.stopPropagation(); if (!pieces[index]) return; if (confirm(`Delete "${pieces[index].title}"?`)) { pieces.splice(index, 1); if (currentPieceIndex === index) { currentPieceIndex = -1; currentSectionIndex = -1; if (practiceState.isRunning) stopPractice(); setView('pieceList'); } else if (currentPieceIndex > index) { currentPieceIndex--; } saveData(); if(appView !== 'pieceList') renderAppView(); } }
-     function renderPieceList() { ui.pieceList.innerHTML = ''; if (pieces.length === 0) { ui.pieceList.innerHTML = '<p style="color: var(--wood-medium); text-align: center;">No pieces yet.</p>'; return; } pieces.forEach((piece, index) => { const item = document.createElement('div'); item.className = 'list-item'; if (index === currentPieceIndex && (appView === 'sectionView' || appView === 'practiceView')) item.classList.add('selected'); item.innerHTML = `<div class="list-item-content"><strong>${piece.title}</strong>${piece.composer ? `<em>${piece.composer}</em>` : ''}</div><div class="list-item-actions"><button class="danger icon-button" onclick="deletePiece(${index}, event)" title="Delete Piece"><svg class="icon"><use xlink:href="#icon-delete"></use></svg><span>Delete</span></button></div>`; item.onclick = (event) => { if (!event.target.closest('button')) showSectionsForPiece(index); }; ui.pieceList.appendChild(item); }); }
+        setView("sectionView");
+      }
+      // (deletePiece, renderPieceList - keep previous implementations)
+      function deletePiece(index, event) {
+        event.stopPropagation();
+        if (!pieces[index]) return;
+        if (confirm(`Delete "${pieces[index].title}"?`)) {
+          pieces.splice(index, 1);
+          if (currentPieceIndex === index) {
+            currentPieceIndex = -1;
+            currentSectionIndex = -1;
+            if (practiceState.isRunning) stopPractice();
+            setView("pieceList");
+          } else if (currentPieceIndex > index) {
+            currentPieceIndex--;
+          }
+          saveData();
+          if (appView !== "pieceList") renderAppView();
+        }
+      }
+      function renderPieceList() {
+        ui.pieceList.innerHTML = "";
+        if (pieces.length === 0) {
+          ui.pieceList.innerHTML =
+            '<p style="color: var(--wood-medium); text-align: center;">No pieces yet.</p>';
+          return;
+        }
+        pieces.forEach((piece, index) => {
+          const item = document.createElement("div");
+          item.className = "list-item";
+          if (
+            index === currentPieceIndex &&
+            (appView === "sectionView" || appView === "practiceView")
+          )
+            item.classList.add("selected");
+          item.innerHTML = `<div class="list-item-content"><strong>${
+            piece.title
+          }</strong>${
+            piece.composer ? `<em>${piece.composer}</em>` : ""
+          }</div><div class="list-item-actions"><button class="danger icon-button" onclick="deletePiece(${index}, event)" title="Delete Piece"><svg class="icon"><use xlink:href="#icon-delete"></use></svg><span>Delete</span></button></div>`;
+          item.onclick = (event) => {
+            if (!event.target.closest("button")) showSectionsForPiece(index);
+          };
+          ui.pieceList.appendChild(item);
+        });
+      }
 
-    // --- Section Management (Add/Edit/Delete) ---
-    // (renderSectionList - keep previous implementation)
-    function renderSectionList() { ui.sectionList.innerHTML = ''; if (currentPieceIndex === -1 || !pieces[currentPieceIndex]) { if (ui.currentPieceTitleDisplay) ui.currentPieceTitleDisplay.textContent = 'Practice Sections'; ui.sectionList.innerHTML = '<p style="color: var(--wood-medium); text-align: center;">Select a piece.</p>'; return; } const piece = pieces[currentPieceIndex]; if (ui.currentPieceTitleDisplay) ui.currentPieceTitleDisplay.textContent = `${piece.title}`; if (!piece.sections || piece.sections.length === 0) { ui.sectionList.innerHTML = '<p style="color: var(--wood-medium); text-align: center;">No sections defined.</p>'; return; } piece.sections.forEach((section, index) => { const item = document.createElement('div'); item.className = 'list-item'; if (section.id === editingSectionId || (appView === 'practiceView' && index === currentSectionIndex)) item.classList.add('selected'); item.innerHTML = `<div class="list-item-content"><strong>${section.label}</strong> (m.${section.startMeasure}-${section.endMeasure})<br><em>${section.startTempo} → ${section.goalTempo} BPM (+${section.tempoIncrement}/${section.repsPerTempo} reps)</em>${section.notes ? `<em style="margin-top: 5px; color: var(--text-dark); font-style: italic;">Notes: ${section.notes}</em>` : ''}</div><div class="list-item-actions"><button onclick="startEditSection('${section.id}', event)" class="secondary edit-button icon-button" title="Edit Section"><svg class="icon"><use xlink:href="#icon-edit"></use></svg><span>Edit</span></button><button onclick="startPracticeSession(${index}, event)" class="primary">Practice</button><button class="danger icon-button" onclick="deleteSection('${section.id}', event)" title="Delete Section"><svg class="icon"><use xlink:href="#icon-delete"></use></svg><span>Delete</span></button></div>`; ui.sectionList.appendChild(item); }); }
-    // Updated addOrUpdateSection to use specific error display
-     function addOrUpdateSection() {
-         if (currentPieceIndex === -1 || !pieces[currentPieceIndex]) return;
-         hideError(true); // Clear global error
-         hideSectionFormError(); // Clear specific form error
+      // --- Section Management (Add/Edit/Delete) ---
+      // (renderSectionList - keep previous implementation)
+      function renderSectionList() {
+        ui.sectionList.innerHTML = "";
+        if (currentPieceIndex === -1 || !pieces[currentPieceIndex]) {
+          if (ui.currentPieceTitleDisplay)
+            ui.currentPieceTitleDisplay.textContent = "Practice Sections";
+          ui.sectionList.innerHTML =
+            '<p style="color: var(--wood-medium); text-align: center;">Select a piece.</p>';
+          return;
+        }
+        const piece = pieces[currentPieceIndex];
+        if (ui.currentPieceTitleDisplay)
+          ui.currentPieceTitleDisplay.textContent = `${piece.title}`;
+        if (!piece.sections || piece.sections.length === 0) {
+          ui.sectionList.innerHTML =
+            '<p style="color: var(--wood-medium); text-align: center;">No sections defined.</p>';
+          return;
+        }
+        piece.sections.forEach((section, index) => {
+          const item = document.createElement("div");
+          item.className = "list-item";
+          if (
+            section.id === editingSectionId ||
+            (appView === "practiceView" && index === currentSectionIndex)
+          )
+            item.classList.add("selected");
+          item.innerHTML = `<div class="list-item-content"><strong>${
+            section.label
+          }</strong> (m.${section.startMeasure}-${section.endMeasure})<br><em>${
+            section.startTempo
+          } → ${section.goalTempo} BPM (+${section.tempoIncrement}/${
+            section.repsPerTempo
+          } reps)</em>${
+            section.notes
+              ? `<em style="margin-top: 5px; color: var(--text-dark); font-style: italic;">Notes: ${section.notes}</em>`
+              : ""
+          }</div><div class="list-item-actions"><button onclick="startEditSection('${
+            section.id
+          }', event)" class="secondary edit-button icon-button" title="Edit Section"><svg class="icon"><use xlink:href="#icon-edit"></use></svg><span>Edit</span></button><button onclick="startPracticeSession(${index}, event)" class="primary">Practice</button><button class="danger icon-button" onclick="deleteSection('${
+            section.id
+          }', event)" title="Delete Section"><svg class="icon"><use xlink:href="#icon-delete"></use></svg><span>Delete</span></button></div>`;
+          ui.sectionList.appendChild(item);
+        });
+      }
+      // Updated addOrUpdateSection to use specific error display
+      function addOrUpdateSection() {
+        if (currentPieceIndex === -1 || !pieces[currentPieceIndex]) return;
+        hideError(true); // Clear global error
+        hideSectionFormError(); // Clear specific form error
 
-         const label = ui.sectionLabelInput.value.trim();
-         const startMeasure = parseInt(ui.startMeasureInput.value);
-         const endMeasure = parseInt(ui.endMeasureInput.value);
-         const startTempo = parseInt(ui.startTempoInput.value);
-         const goalTempo = parseInt(ui.goalTempoInput.value);
-         const tempoIncrement = parseInt(ui.tempoIncrementInput.value);
-         const repsPerTempo = parseInt(ui.repsPerTempoInput.value);
-         const notes = ui.sectionNotesInput.value.trim();
+        const label = ui.sectionLabelInput.value.trim();
+        const startMeasure = parseInt(ui.startMeasureInput.value);
+        const endMeasure = parseInt(ui.endMeasureInput.value);
+        const startTempo = parseInt(ui.startTempoInput.value);
+        const goalTempo = parseInt(ui.goalTempoInput.value);
+        const tempoIncrement = parseInt(ui.tempoIncrementInput.value);
+        const repsPerTempo = parseInt(ui.repsPerTempoInput.value);
+        const notes = ui.sectionNotesInput.value.trim();
 
-         // Use displayError(message, false) to show errors within the section form area
-         if (!label) { displayError("Section label is required.", false); return; }
-         if (isNaN(startMeasure) || startMeasure < 1) { displayError("Invalid start measure.", false); return; }
-         if (isNaN(endMeasure) || endMeasure < startMeasure) { displayError("End measure must be >= start measure.", false); return; }
-         if (isNaN(startTempo) || startTempo < 20 || startTempo > 300) { displayError("Invalid start tempo (20-300).", false); return; }
-         if (isNaN(goalTempo) || goalTempo < 20 || goalTempo > 300) { displayError("Invalid goal tempo (20-300).", false); return; }
-         if (goalTempo < startTempo) { displayError("Goal tempo must be >= start tempo.", false); return; }
-         if (isNaN(tempoIncrement) || tempoIncrement < 1 || tempoIncrement > 50) { displayError("Invalid tempo increment (1-50).", false); return; }
-         if (isNaN(repsPerTempo) || repsPerTempo < 1 || repsPerTempo > 100) { displayError("Invalid reps per tempo (1-100).", false); return; }
+        // Use displayError(message, false) to show errors within the section form area
+        if (!label) {
+          displayError("Section label is required.", false);
+          return;
+        }
+        if (isNaN(startMeasure) || startMeasure < 1) {
+          displayError("Invalid start measure.", false);
+          return;
+        }
+        if (isNaN(endMeasure) || endMeasure < startMeasure) {
+          displayError("End measure must be >= start measure.", false);
+          return;
+        }
+        if (isNaN(startTempo) || startTempo < 20 || startTempo > 300) {
+          displayError("Invalid start tempo (20-300).", false);
+          return;
+        }
+        if (isNaN(goalTempo) || goalTempo < 20 || goalTempo > 300) {
+          displayError("Invalid goal tempo (20-300).", false);
+          return;
+        }
+        if (goalTempo < startTempo) {
+          displayError("Goal tempo must be >= start tempo.", false);
+          return;
+        }
+        if (
+          isNaN(tempoIncrement) ||
+          tempoIncrement < 1 ||
+          tempoIncrement > 50
+        ) {
+          displayError("Invalid tempo increment (1-50).", false);
+          return;
+        }
+        if (isNaN(repsPerTempo) || repsPerTempo < 1 || repsPerTempo > 100) {
+          displayError("Invalid reps per tempo (1-100).", false);
+          return;
+        }
 
-        const sectionData = { label, startMeasure, endMeasure, startTempo, goalTempo, tempoIncrement, repsPerTempo, notes };
-        if (editingSectionId) { const idx = pieces[currentPieceIndex].sections.findIndex(s => s.id === editingSectionId); if (idx > -1) pieces[currentPieceIndex].sections[idx] = { ...pieces[currentPieceIndex].sections[idx], ...sectionData }; }
-        else { sectionData.id = Date.now() + Math.random(); pieces[currentPieceIndex].sections.push(sectionData); }
-         saveData(); cancelEditSection(); renderSectionList();
-     }
-    // (startEditSection, cancelEditSection, deleteSection - keep previous implementations)
-    function startEditSection(sectionId, event) { event.stopPropagation(); if (currentPieceIndex === -1 || !pieces[currentPieceIndex]) return; const piece = pieces[currentPieceIndex]; const section = piece.sections.find(s => s.id === sectionId); if (!section) return; editingSectionId = sectionId; ui.editingSectionIdInput.value = sectionId; ui.sectionLabelInput.value = section.label; ui.startMeasureInput.value = section.startMeasure; ui.endMeasureInput.value = section.endMeasure; ui.startTempoInput.value = section.startTempo; ui.goalTempoInput.value = section.goalTempo; ui.tempoIncrementInput.value = section.tempoIncrement; ui.repsPerTempoInput.value = section.repsPerTempo; ui.sectionNotesInput.value = section.notes; ui.sectionFormTitle.textContent = "Edit Section"; ui.saveSectionButton.textContent = "Save Changes"; ui.cancelEditButton.classList.remove('hidden'); ui.addSectionForm.classList.add('editing'); hideError(true); hideSectionFormError(); ui.addSectionForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); renderSectionList(); }
-    function cancelEditSection() { editingSectionId = null; ui.editingSectionIdInput.value = ""; ui.sectionLabelInput.value = ""; ui.startMeasureInput.value = "1"; ui.endMeasureInput.value = "1"; ui.startTempoInput.value = "60"; ui.goalTempoInput.value = "100"; ui.tempoIncrementInput.value = "5"; ui.repsPerTempoInput.value = "3"; ui.sectionNotesInput.value = ""; ui.sectionFormTitle.textContent = "Add New Section"; ui.saveSectionButton.textContent = "Add Section"; ui.cancelEditButton.classList.add('hidden'); ui.addSectionForm.classList.remove('editing'); hideSectionFormError(); /* Don't re-render list */ }
-    function deleteSection(sectionId, event) { event.stopPropagation(); if (currentPieceIndex === -1 || !pieces[currentPieceIndex]) return; const piece = pieces[currentPieceIndex]; const sectionIndex = piece.sections.findIndex(s => s.id === sectionId); if (sectionIndex === -1) return; if (confirm(`Delete section "${piece.sections[sectionIndex].label}"?`)) { piece.sections.splice(sectionIndex, 1); if (editingSectionId === sectionId) cancelEditSection(); if (appView === 'practiceView' && currentSectionIndex === sectionIndex) { stopPracticeAndShowSections(); } else if (appView === 'practiceView' && currentSectionIndex > sectionIndex) { currentSectionIndex--; } saveData(); renderSectionList(); } }
+        const sectionData = {
+          label,
+          startMeasure,
+          endMeasure,
+          startTempo,
+          goalTempo,
+          tempoIncrement,
+          repsPerTempo,
+          notes,
+        };
+        if (editingSectionId) {
+          const idx = pieces[currentPieceIndex].sections.findIndex(
+            (s) => s.id === editingSectionId
+          );
+          if (idx > -1)
+            pieces[currentPieceIndex].sections[idx] = {
+              ...pieces[currentPieceIndex].sections[idx],
+              ...sectionData,
+            };
+        } else {
+          sectionData.id = Date.now() + Math.random();
+          pieces[currentPieceIndex].sections.push(sectionData);
+        }
+        saveData();
+        cancelEditSection();
+        renderSectionList();
+      }
+      // (startEditSection, cancelEditSection, deleteSection - keep previous implementations)
+      function startEditSection(sectionId, event) {
+        event.stopPropagation();
+        if (currentPieceIndex === -1 || !pieces[currentPieceIndex]) return;
+        const piece = pieces[currentPieceIndex];
+        const section = piece.sections.find((s) => s.id === sectionId);
+        if (!section) return;
+        editingSectionId = sectionId;
+        ui.editingSectionIdInput.value = sectionId;
+        ui.sectionLabelInput.value = section.label;
+        ui.startMeasureInput.value = section.startMeasure;
+        ui.endMeasureInput.value = section.endMeasure;
+        ui.startTempoInput.value = section.startTempo;
+        ui.goalTempoInput.value = section.goalTempo;
+        ui.tempoIncrementInput.value = section.tempoIncrement;
+        ui.repsPerTempoInput.value = section.repsPerTempo;
+        ui.sectionNotesInput.value = section.notes;
+        ui.sectionFormTitle.textContent = "Edit Section";
+        ui.saveSectionButton.textContent = "Save Changes";
+        ui.cancelEditButton.classList.remove("hidden");
+        ui.addSectionForm.classList.add("editing");
+        hideError(true);
+        hideSectionFormError();
+        ui.addSectionForm.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+        renderSectionList();
+      }
+      function cancelEditSection() {
+        editingSectionId = null;
+        ui.editingSectionIdInput.value = "";
+        ui.sectionLabelInput.value = "";
+        ui.startMeasureInput.value = "1";
+        ui.endMeasureInput.value = "1";
+        ui.startTempoInput.value = "60";
+        ui.goalTempoInput.value = "100";
+        ui.tempoIncrementInput.value = "5";
+        ui.repsPerTempoInput.value = "3";
+        ui.sectionNotesInput.value = "";
+        ui.sectionFormTitle.textContent = "Add New Section";
+        ui.saveSectionButton.textContent = "Add Section";
+        ui.cancelEditButton.classList.add("hidden");
+        ui.addSectionForm.classList.remove("editing");
+        hideSectionFormError(); /* Don't re-render list */
+      }
+      function deleteSection(sectionId, event) {
+        event.stopPropagation();
+        if (currentPieceIndex === -1 || !pieces[currentPieceIndex]) return;
+        const piece = pieces[currentPieceIndex];
+        const sectionIndex = piece.sections.findIndex(
+          (s) => s.id === sectionId
+        );
+        if (sectionIndex === -1) return;
+        if (
+          confirm(`Delete section "${piece.sections[sectionIndex].label}"?`)
+        ) {
+          piece.sections.splice(sectionIndex, 1);
+          if (editingSectionId === sectionId) cancelEditSection();
+          if (
+            appView === "practiceView" &&
+            currentSectionIndex === sectionIndex
+          ) {
+            stopPracticeAndShowSections();
+          } else if (
+            appView === "practiceView" &&
+            currentSectionIndex > sectionIndex
+          ) {
+            currentSectionIndex--;
+          }
+          saveData();
+          renderSectionList();
+        }
+      }
 
+      // --- Practice Logic ---
+      // (Keep startPracticeSession, renderPracticeArea, updatePracticeDisplay, startStopPractice, recordGoodRep, resetCurrentReps, stopPractice)
+      function startPracticeSession(sectionIndex, event) {
+        if (event) event.stopPropagation();
+        if (currentPieceIndex === -1) return;
+        const piece = pieces[currentPieceIndex];
+        if (!piece || !piece.sections || !piece.sections[sectionIndex]) return;
+        if (!resumeAudioContext()) {
+          displayError("Audio system not ready.", true);
+          return;
+        }
+        if (globalMetronomeState.isRunning) toggleGlobalMetronome();
+        if (tunerState.isEnabled) toggleTuner();
+        currentSectionIndex = sectionIndex;
+        const section = piece.sections[sectionIndex];
+        practiceState = {
+          section: section,
+          currentTempo: section.startTempo,
+          goalTempo: section.goalTempo,
+          startTempo: section.startTempo,
+          tempoIncrement: section.tempoIncrement,
+          repsPerTempo: section.repsPerTempo,
+          completedReps: 0,
+          isRunning: false,
+          isSectionComplete: false,
+        };
+        setView("practiceView");
+      }
+      function renderPracticeArea() {
+        if (
+          !practiceState.section ||
+          currentPieceIndex === -1 ||
+          !pieces[currentPieceIndex]
+        ) {
+          console.error("State error renderPracticeArea");
+          setView("sectionView");
+          return;
+        }
+        const piece = pieces[currentPieceIndex];
+        const section = practiceState.section;
+        if (ui.pPieceTitle) ui.pPieceTitle.textContent = piece.title;
+        if (ui.pSectionLabel) ui.pSectionLabel.textContent = section.label;
+        if (ui.pMeasures)
+          ui.pMeasures.textContent = `m. ${section.startMeasure} - ${section.endMeasure}`;
+        if (ui.pNotes) ui.pNotes.textContent = section.notes || "(No notes)";
+        if (ui.pGoalTempo) ui.pGoalTempo.textContent = section.goalTempo;
+        if (ui.pRepsNeeded) ui.pRepsNeeded.textContent = section.repsPerTempo;
+        updatePracticeDisplay();
+        if (ui.completionMessage) {
+          ui.completionMessage.classList.add("hidden");
+          ui.completionMessage.textContent = "";
+        }
+      }
+      function updatePracticeDisplay() {
+        if (!practiceState.section || !ui.pCurrentTempo) return;
+        ui.pCurrentTempo.textContent = practiceState.currentTempo;
+        ui.pRepsCompleted.textContent = practiceState.completedReps;
+        ui.pStatus.textContent = practiceState.isRunning
+          ? `Running @ ${practiceState.currentTempo} BPM`
+          : practiceState.isSectionComplete
+          ? "Section Goal Reached!"
+          : "Paused / Ready";
+        const tempoProgress =
+          practiceState.goalTempo === practiceState.startTempo
+            ? practiceState.isSectionComplete
+              ? 100
+              : 0
+            : Math.max(
+                0,
+                Math.min(
+                  100,
+                  ((practiceState.currentTempo - practiceState.startTempo) /
+                    (practiceState.goalTempo - practiceState.startTempo)) *
+                    100
+                )
+              );
+        if (ui.tempoProgressBar)
+          ui.tempoProgressBar.style.width = `${tempoProgress}%`;
+        const repsProgress =
+          practiceState.repsPerTempo === 0
+            ? 0
+            : (practiceState.completedReps / practiceState.repsPerTempo) * 100;
+        if (ui.repsProgressBar)
+          ui.repsProgressBar.style.width = `${repsProgress}%`;
+        if (ui.startStopButton) {
+          ui.startStopButton.textContent = practiceState.isRunning
+            ? "Pause"
+            : "Start";
+          ui.startStopButton.disabled = practiceState.isSectionComplete;
+        }
+        if (ui.goodRepButton)
+          ui.goodRepButton.disabled =
+            !practiceState.isRunning || practiceState.isSectionComplete;
+        if (ui.resetRepButton)
+          ui.resetRepButton.disabled =
+            !practiceState.isRunning ||
+            practiceState.completedReps === 0 ||
+            practiceState.isSectionComplete;
+        if (globalMetronomeState.visualElement)
+          globalMetronomeState.visualElement.style.opacity =
+            practiceState.isRunning
+              ? "1"
+              : globalMetronomeState.isRunning
+              ? "1"
+              : "0.6";
+      }
+      function startStopPractice() {
+        if (!practiceState.section || practiceState.isSectionComplete) return;
+        if (!resumeAudioContext()) {
+          displayError("Audio not ready.", true);
+          return;
+        }
+        practiceState.isRunning = !practiceState.isRunning;
+        if (practiceState.isRunning) startMetronome(practiceState.currentTempo);
+        else stopMetronome();
+        updatePracticeDisplay();
+      }
+      function recordGoodRep() {
+        if (!practiceState.isRunning || practiceState.isSectionComplete) return;
+        practiceState.completedReps++;
+        if (practiceState.completedReps >= practiceState.repsPerTempo) {
+          if (practiceState.currentTempo >= practiceState.goalTempo) {
+            practiceState.isSectionComplete = true;
+            practiceState.isRunning = false;
+            stopMetronome();
+            if (ui.completionMessage) {
+              ui.completionMessage.textContent = `🎉 Section Goal Reached (${practiceState.goalTempo} BPM)!`;
+              ui.completionMessage.classList.remove("hidden", "error-message");
+              ui.completionMessage.style.backgroundColor =
+                "rgba(95, 138, 90, 0.15)";
+              ui.completionMessage.style.borderColor = "var(--success-color)";
+              ui.completionMessage.style.color = "var(--success-color)";
+            }
+            updatePracticeDisplay();
+          } else {
+            practiceState.currentTempo = Math.min(
+              practiceState.goalTempo,
+              practiceState.currentTempo + practiceState.tempoIncrement
+            );
+            practiceState.completedReps = 0;
+            stopMetronome();
+            startMetronome(practiceState.currentTempo);
+            updatePracticeDisplay();
+          }
+        } else {
+          updatePracticeDisplay();
+        }
+      }
+      function resetCurrentReps() {
+        if (!practiceState.isRunning || practiceState.isSectionComplete) return;
+        practiceState.completedReps = 0;
+        updatePracticeDisplay();
+      }
+      function stopPractice() {
+        stopMetronome();
+        practiceState.isRunning = false;
+        if (ui.pStatus)
+          ui.pStatus.textContent = practiceState.isSectionComplete
+            ? "Section Goal Reached!"
+            : "Idle";
+        if (ui.startStopButton) ui.startStopButton.textContent = "Start";
+        updatePracticeDisplay();
+      }
 
-    // --- Practice Logic ---
-    // (Keep startPracticeSession, renderPracticeArea, updatePracticeDisplay, startStopPractice, recordGoodRep, resetCurrentReps, stopPractice)
-     function startPracticeSession(sectionIndex, event) { if (event) event.stopPropagation(); if (currentPieceIndex === -1) return; const piece = pieces[currentPieceIndex]; if (!piece || !piece.sections || !piece.sections[sectionIndex]) return; if (!resumeAudioContext()) { displayError("Audio system not ready.", true); return; } if (globalMetronomeState.isRunning) toggleGlobalMetronome(); if (tunerState.isEnabled) toggleTuner(); currentSectionIndex = sectionIndex; const section = piece.sections[sectionIndex]; practiceState = { section: section, currentTempo: section.startTempo, goalTempo: section.goalTempo, startTempo: section.startTempo, tempoIncrement: section.tempoIncrement, repsPerTempo: section.repsPerTempo, completedReps: 0, isRunning: false, isSectionComplete: false }; setView('practiceView'); }
-     function renderPracticeArea() { if (!practiceState.section || currentPieceIndex === -1 || !pieces[currentPieceIndex]) { console.error("State error renderPracticeArea"); setView('sectionView'); return; } const piece = pieces[currentPieceIndex]; const section = practiceState.section; if(ui.pPieceTitle) ui.pPieceTitle.textContent = piece.title; if(ui.pSectionLabel) ui.pSectionLabel.textContent = section.label; if(ui.pMeasures) ui.pMeasures.textContent = `m. ${section.startMeasure} - ${section.endMeasure}`; if(ui.pNotes) ui.pNotes.textContent = section.notes || '(No notes)'; if(ui.pGoalTempo) ui.pGoalTempo.textContent = section.goalTempo; if(ui.pRepsNeeded) ui.pRepsNeeded.textContent = section.repsPerTempo; updatePracticeDisplay(); if (ui.completionMessage) { ui.completionMessage.classList.add('hidden'); ui.completionMessage.textContent = ''; } }
-     function updatePracticeDisplay() { if (!practiceState.section || !ui.pCurrentTempo) return; ui.pCurrentTempo.textContent = practiceState.currentTempo; ui.pRepsCompleted.textContent = practiceState.completedReps; ui.pStatus.textContent = practiceState.isRunning ? `Running @ ${practiceState.currentTempo} BPM` : (practiceState.isSectionComplete ? 'Section Goal Reached!' : 'Paused / Ready'); const tempoProgress = practiceState.goalTempo === practiceState.startTempo ? (practiceState.isSectionComplete ? 100 : 0) : Math.max(0, Math.min(100, ((practiceState.currentTempo - practiceState.startTempo) / (practiceState.goalTempo - practiceState.startTempo)) * 100)); if(ui.tempoProgressBar) ui.tempoProgressBar.style.width = `${tempoProgress}%`; const repsProgress = practiceState.repsPerTempo === 0 ? 0 : (practiceState.completedReps / practiceState.repsPerTempo) * 100; if(ui.repsProgressBar) ui.repsProgressBar.style.width = `${repsProgress}%`; if(ui.startStopButton) { ui.startStopButton.textContent = practiceState.isRunning ? 'Pause' : 'Start'; ui.startStopButton.disabled = practiceState.isSectionComplete; } if(ui.goodRepButton) ui.goodRepButton.disabled = !practiceState.isRunning || practiceState.isSectionComplete; if(ui.resetRepButton) ui.resetRepButton.disabled = !practiceState.isRunning || practiceState.completedReps === 0 || practiceState.isSectionComplete; if (globalMetronomeState.visualElement) globalMetronomeState.visualElement.style.opacity = practiceState.isRunning ? '1' : (globalMetronomeState.isRunning ? '1' : '0.6'); }
-     function startStopPractice() { if (!practiceState.section || practiceState.isSectionComplete) return; if (!resumeAudioContext()) { displayError("Audio not ready.", true); return; } practiceState.isRunning = !practiceState.isRunning; if (practiceState.isRunning) startMetronome(practiceState.currentTempo); else stopMetronome(); updatePracticeDisplay(); }
-     function recordGoodRep() { if (!practiceState.isRunning || practiceState.isSectionComplete) return; practiceState.completedReps++; if (practiceState.completedReps >= practiceState.repsPerTempo) { if (practiceState.currentTempo >= practiceState.goalTempo) { practiceState.isSectionComplete = true; practiceState.isRunning = false; stopMetronome(); if (ui.completionMessage) { ui.completionMessage.textContent = `🎉 Section Goal Reached (${practiceState.goalTempo} BPM)!`; ui.completionMessage.classList.remove('hidden', 'error-message'); ui.completionMessage.style.backgroundColor = 'rgba(95, 138, 90, 0.15)'; ui.completionMessage.style.borderColor = 'var(--success-color)'; ui.completionMessage.style.color = 'var(--success-color)'; } updatePracticeDisplay(); } else { practiceState.currentTempo = Math.min(practiceState.goalTempo, practiceState.currentTempo + practiceState.tempoIncrement); practiceState.completedReps = 0; stopMetronome(); startMetronome(practiceState.currentTempo); updatePracticeDisplay(); } } else { updatePracticeDisplay(); } }
-     function resetCurrentReps() { if (!practiceState.isRunning || practiceState.isSectionComplete) return; practiceState.completedReps = 0; updatePracticeDisplay(); }
-     function stopPractice() { stopMetronome(); practiceState.isRunning = false; if (ui.pStatus) ui.pStatus.textContent = practiceState.isSectionComplete ? 'Section Goal Reached!' : 'Idle'; if (ui.startStopButton) ui.startStopButton.textContent = 'Start'; updatePracticeDisplay(); }
-
-
-    // --- Initialization ---
-    window.onload = () => {
+      // --- Initialization ---
+      window.onload = () => {
         globalMetronomeState.visualElement = ui.metroVisual; // Assign early
         loadData(); // Load data, including sound preference
         tryInitAudioContext(); // Attempt passive init
         renderAppView(); // Render initial view
-    };
-
-</script>
-
-</body>
+      };
+    </script>
+  </body>
 </html>
