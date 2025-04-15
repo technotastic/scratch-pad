@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pixel Platformer Adventure</title>
+    <style>
+      /* Basic Reset & Styling */
+      body {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100vw; /* Use full viewport width */
+        height: 100vh; /* Use full viewport height */
+        font-family: "PixelFont", monospace; /* Fallback to monospace */
+        color: #e0e0e0; /* Light grey text */
+        overflow: hidden; /* Prevent scrollbars */
+        background-color: #000; /* Black background */
+      }
+      canvas {
+        border: 2px solid #4a4a7f; /* Dark purple border */
+        background-color: #0f0f1a; /* Very dark canvas background */
+        display: block; /* Remove extra space below canvas */
+        /* JS will set style width/height for scaling */
+        max-width: 100vw; /* Ensure canvas doesn't overflow viewport width */
+        max-height: 100vh; /* Ensure canvas doesn't overflow viewport height */
+        object-fit: contain; /* Scales canvas content while maintaining aspect ratio */
+        image-rendering: pixelated; /* Ensure crisp pixels */
+        image-rendering: -moz-crisp-edges;
+        image-rendering: crisp-edges;
+      }
+      /* Pixel Font Embedding (Using a generic Data URL structure - replace with actual font data) */
+      /* Find a suitable open-source pixel font (e.g., Press Start 2P, Kenney Pixel) */
+      /* Convert its WOFF or WOFF2 file to Base64 (e.g., using an online converter) */
+      /* Replace 'YOUR_BASE64_FONT_DATA_HERE' */
+      @font-face {
+        font-family: "PixelFont";
+        /* src: url(data:font/woff2;base64,YOUR_BASE64_FONT_DATA_HERE) format('woff2'),
+                 url(data:font/woff;base64,YOUR_BASE64_FONT_DATA_HERE) format('woff'); */
+        /* Using generic names as placeholder - this won't render a real font until replaced */
+        src: local("Arial"); /* Fallback if data URL fails or isn't provided */
+        font-weight: normal;
+        font-style: normal;
+      }
+
+      #messageDiv {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 0, 0.7);
+        color: #fff;
+        padding: 20px 40px;
+        border-radius: 5px;
+        font-size: 1.5em; /* Adjusted relative size */
+        text-align: center;
+        display: none; /* Hidden by default */
+        border: 2px solid #4a4a7f;
+        z-index: 10;
+        white-space: pre; /* Preserve line breaks in messages */
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Optional Fullscreen Button (can be triggered by 'f' key anyway)
+    <button id="fullscreenBtn">Fullscreen</button>
+    -->
+    <canvas id="gameCanvas"></canvas>
+    <div id="messageDiv"></div>
+
+    <script>
+      // Self-Executing Anonymous Function (IIFE) to encapsulate game code
+      (function () {
+        // --- Get Canvas and Context ---
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const messageDiv = document.getElementById("messageDiv");
+
+        // --- Game Constants ---
+        const TILE_SIZE = 20; // Size of each tile in pixels
+        const GRAVITY = 0.4; // Downward acceleration
+        const JUMP_VELOCITY = -10; // Initial upward velocity on jump
+        const MOVE_SPEED = 3.5; // Horizontal speed
+        const MAX_FALL_SPEED = 8; // Terminal velocity
+        const WALL_JUMP_PUSH_X = 5; // Horizontal velocity boost from wall jump
+        const WALL_JUMP_PUSH_Y = -8; // Vertical velocity boost from wall jump
+        const WALL_SLIDE_SPEED = 1; // Max speed sliding down a wall
+        const PLAYER_WIDTH = TILE_SIZE * 0.8;
+        const PLAYER_HEIGHT = TILE_SIZE * 0.9;
+        const ENEMY_SPEED = 1.0;
+        const ENEMY_WIDTH = TILE_SIZE * 0.8;
+        const ENEMY_HEIGHT = TILE_SIZE * 0.8;
+
+        const VIEWPORT_WIDTH_TILES = 32; // Base internal width in tiles
+        const VIEWPORT_HEIGHT_TILES = 24; // Base internal height in tiles
+        const BASE_WIDTH = VIEWPORT_WIDTH_TILES * TILE_SIZE; // Original target width
+        const BASE_HEIGHT = VIEWPORT_HEIGHT_TILES * TILE_SIZE; // Original target height
+
+        // --- Game State ---
+        let gameState = {
+          currentWorld: 0, // 0-indexed world (World 1 is index 0)
+          currentLevel: 0, // 0-indexed level (Level 1 is index 0)
+          lives: 3,
+          score: 0,
+          player: {
+            x: TILE_SIZE * 2,
+            y: TILE_SIZE * 2,
+            vx: 0,
+            vy: 0,
+            width: PLAYER_WIDTH,
+            height: PLAYER_HEIGHT,
+            isOnGround: false,
+            isTouchingWall: 0, // -1 for left, 1 for right, 0 for none
+            canWallJump: false,
+            wallJumpCooldown: 0, // Timer to prevent instant re-jump on same wall
+            facingDirection: 1, // 1 for right, -1 for left
+          },
+          camera: {
+            x: 0,
+            y: 0,
+          },
+          keys: {
+            left: false,
+            right: false,
+            up: false, // Used for jump
+          },
+          level: [], // Current loaded level data (array of arrays of chars)
+          levelWidth: 0, // Width of the current level in pixels
+          levelHeight: 0, // Height of the current level in pixels
+          enemies: [], // Array to hold active enemy objects
+          status: "loading", // loading, menu, playing, level_transition, game_over, win
+          message: "",
+          messageTimer: 0,
+        };
+
+        // --- Level Data ---
+        // Structure: levels[worldIndex][levelIndex]
+        // Tile Types (Example):
+        // '0': Empty Space
+        // '1': Solid Block (Ground, Wall) - Brown
+        // '2': Player Start Position (Converted to 0 after load)
+        // '3': Level Exit - Green
+        // '4': Hazard (Spikes, Lava) - Red
+        // '5': Coin/Collectible - Yellow
+        // '6': Basic Enemy Spawn Point (Walker) - Red Enemy Drawn
+        // --- PLACEHOLDER LEVEL DATA (GENERATED) ---
+        // These are just examples, design your own!
+        const levels = [
+          // World 1: Grasslands Introduction
+          [
+            // 1-1
+            [
+              "111111111111111111111111111111111111111111111111111111111111",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "102000000000000000000000000000000000000000000000000000000001",
+              "100000001110000000050000000000000000111000000000000000000001",
+              "100500000000000000111110000000000000000000000000000000000001",
+              "100000000000000000000000000000111111110000000000000000000001",
+              "100000111000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "111110000000000000000000000000000000000000000000000000000001",
+              "100000000000111111111000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "100006000000000000000000000000000000000000000000000000000301",
+              "111111111111111111111111111111111111111111111111111111111111",
+            ],
+            // 1-2
+            [
+              "11111111111111111111111111111111111111111111111111111111111111111111",
+              "10000000000000000000000000000000000000000000000000000000000000000001",
+              "10200000000000000000000000000000000000000000000000000000000000000001",
+              "11110000000000000000000000000000000000000000000000000000000000000001",
+              "10000000000000000000000000000000000000000000000000000000000000000001",
+              "10000000001111111111110000000000000000000000000000000000000000000001",
+              "10000000000000000000000000000000000000000000000000000000000000000001",
+              "10000000000000000000000000000000000000000000000000000000000000000001",
+              "11111111110000000000000000000000000000000000000000000000000001111111",
+              "10000000000000000000000000000000000000000000000000000000000000000001",
+              "10000000000000111111111000000000000000000000000000000000000000000001",
+              "10000000000000000000000000000000000000000000000000000000000000000001",
+              "10000000000000000000000000000000000000000000000000000000000000000301",
+              "11111111111111111111111111111111111111111111111111111111111111111111",
+            ],
+            // 1-3
+            [
+              "11111111111111111111111111111111111111111111111111111111111111111111111111111111",
+              "10000000000000000000000000000000000000000000000000000000000000000000000000000001",
+              "10200000000000000000000000000000000000000000000000000000000000000000000000000001",
+              "10000000000000000000000000000000000000000000000000000000000000000000000000000001",
+              "11111111110000000000001111111111111111111111111111111111111111110000000000000001",
+              "10000000000000000000000000000000000000000000000000000000000000000000000000000001",
+              "10000000000000000000000000000000000000000000000000000000000000000000000000000001",
+              "10000000000000000000000000000000000000000000000000000000000000000000000000000001",
+              "10000000000000000000000000000000000000000000000000000000000000000000000000000301",
+              "11111111111111111111111111111111111111111111111111111111111111111111111111111111",
+            ],
+            // 1-4
+            [
+              "111111111111111111111111111111111111111111111111111111111111",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "102000000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000301",
+              "111111111111111111111111111111111111111111111111111111111111",
+            ],
+          ],
+          // World 2: Caves & Walls
+          [
+            // 2-1
+            [
+              "111111111111111111111111111111111111111111111111111111111111111111111111",
+              "110000000000000000000000000000000000000000000000000000000000000000000011",
+              "110200000000000000000000000000000000000000000000000000000000000000000011",
+              "110000000000000000000000000000000000000000000000000000000000000000000011",
+              "110000000000000000000000000000000000000000000000000000000000000000000011",
+              "110000000000000000000000000000000000000000000000000000000000000000000011",
+              "110000000000000000000000000000000000000000000000000000000000000000000011",
+              "110000000000000000000000000000000000000000000000000000000000000000000011",
+              "110000000000000000000000000000000000000000000000000000000000000000000011",
+              "110000000000000000000000000000000000000000000000000000000000000000000011",
+              "110000000000000000000000000000000000000000000000000000000000000000000011",
+              "110000000000000000000000000000000000000000000000000000000000000000000311",
+              "111111111111111111111111111111111111111111111111111111111111111111111111",
+            ],
+            // 2-2
+            [
+              "111111111111111111111111111111111111111111111111111111111111",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "102000000000000000000000000000000000000000000000000000000001",
+              "111100000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "100000000011111111111100000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "111111111100000000000000000000000000000000000000000001111111",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "100000000000001111111110000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000301",
+              "111111111111111111111111111111111111111111111111111111111111",
+            ],
+            // 2-3
+            [
+              "111111111111111111111111111111111111111111111111111111111111111111111111",
+              "100000000000000000000000000000000000000000000000000000000000000000000001",
+              "102000000000000000000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000000000000000001",
+              "111111111100000000000011111111111111111111111111111111111111111100000001",
+              "100000000000000000000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000000000000000001",
+              "100000000000000000000000000000000000000000000000000000000000000000000301",
+              "111111111111111111111111111111111111111111111111111111111111111111111111",
+            ],
+            // 2-4
+            [
+              "1111111111111111111111111111111111111111",
+              "1000000000000000000000000000000000000001",
+              "1020000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000301",
+              "1111111111111111111111111111111111111111",
+            ],
+          ],
+          // World 3: Forest Canopy
+          [
+            // 3-1
+            [
+              "1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+              "1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+              "1020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+              "1111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+              "1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000301",
+              "1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+            ],
+            // 3-2 to 3-4: More placeholder levels
+            ["111", "12631", "11111"],
+            ["1111111", "10200060301", "11111111111"],
+            ["111", "1256531", "1111111"],
+          ],
+          // World 4: Crystal Caves
+          [
+            // 4-1 to 4-4: Placeholders with hazards
+            ["11111111111", "1200400031", "11111111111"],
+            ["11111111111", "1200604031", "11111111111"],
+            ["11111111111", "1244446031", "11111111111"],
+            ["11111111111", "1250605431", "11111111111"],
+          ],
+          // World 5: Castle Siege
+          [
+            // 5-1 to 5-4: More complex placeholders, maybe tighter jumps
+            [
+              "11111111111111111111",
+              "12001000100010006031",
+              "10001000100010000001",
+              "14441111111114441111",
+            ],
+            ["11111111111", "12000600031", "11100000111", "11111111111"],
+            ["111111111111111", "120000000000031", "111111111111111"],
+            ["1111111111111", "126005006031", "1111111111111"],
+          ],
+          // World 6: Sky Platforms
+          [
+            // 6-1 to 6-4: Focus on gaps, less ground
+            [
+              "111111100000000000000001111111",
+              "120000100000000000000001000031",
+              "111111100000000000000001111111",
+            ],
+            ["111000111000111", "120000060000031", "111000111000111"],
+            ["11100100100111", "1200060000031", "11100100100111"],
+            ["11001100110011", "125065065031", "11001100110011"],
+          ],
+          // World 7: Volcanic Depths
+          [
+            // 7-1 to 7-4: Lots of hazards
+            ["111111111111111", "12000600000031", "111144441111111"],
+            ["1111111111111", "1206040604031", "1111111111111"],
+            ["1111111111111", "1240404040431", "1111111111111"],
+            ["1111111111111", "126454645431", "1111111111111"],
+          ],
+          // World 8: Final Gauntlet
+          [
+            // 8-1 to 8-4: Mix of everything, harder
+            [
+              "1111111111111111111111111111111111111111",
+              "12001001004001006001004001006001005031",
+              "1111111111111111111111111111111111111111",
+            ],
+            [
+              "1111111111111111111",
+              "120060400604006031",
+              "1111111111111111111",
+            ],
+            [
+              "1111111111111111111",
+              "125464546454645431",
+              "1111111111111111111",
+            ],
+            [
+              "11111111111111111111111111111111111111111111111",
+              "10000000000000000000000000000000000000000000001",
+              "12001111111111111111111111111111111111111111111",
+              "10001                                       1",
+              "10001 6       6       6       6       6     3 1",
+              "11111111111111111111111111111111111111111111111",
+            ],
+          ],
+        ];
+
+        // --- Utility Functions ---
+        function getTile(x, y) {
+          const tileX = Math.floor(x / TILE_SIZE);
+          const tileY = Math.floor(y / TILE_SIZE);
+          if (
+            tileY < 0 ||
+            tileY >= gameState.level.length ||
+            tileX < 0 ||
+            tileX >= gameState.level[0].length
+          ) {
+            return "1"; // Treat out of bounds as solid wall (character)
+          }
+          return gameState.level[tileY]?.[tileX] || "0"; // Default to empty if tile is somehow undefined
+        }
+
+        function isSolidTile(tileType) {
+          return tileType === "1";
+        }
+
+        function isHazardTile(tileType) {
+          return tileType === "4";
+        }
+
+        function isExitTile(tileType) {
+          return tileType === "3";
+        }
+
+        function isCollectibleTile(tileType) {
+          return tileType === "5";
+        }
+
+        function showMessage(text, duration = 3000) {
+          // Duration in ms
+          gameState.message = text;
+          messageDiv.innerText = text;
+          messageDiv.style.display = "block";
+          gameState.messageTimer = duration;
+        }
+
+        function hideMessage() {
+          gameState.message = "";
+          messageDiv.style.display = "none";
+          gameState.messageTimer = 0;
+        }
+
+        function resetPlayerPosition() {
+          // Find player start position ('2') in the current level
+          for (let y = 0; y < gameState.level.length; y++) {
+            for (let x = 0; x < gameState.level[y].length; x++) {
+              if (gameState.level[y][x] === "2") {
+                gameState.player.x =
+                  x * TILE_SIZE + (TILE_SIZE - PLAYER_WIDTH) / 2;
+                gameState.player.y =
+                  y * TILE_SIZE + (TILE_SIZE - PLAYER_HEIGHT);
+                gameState.player.vx = 0;
+                gameState.player.vy = 0;
+                gameState.player.isOnGround = false;
+                gameState.player.isTouchingWall = 0;
+                gameState.player.canWallJump = false;
+                // Don't remove the start tile from the array here, loadLevel makes a fresh copy each time
+                return; // Exit once found
+              }
+            }
+          }
+          // Fallback if no start position is defined
+          console.warn(
+            "No player start tile ('2') found in level! Placing at default."
+          );
+          gameState.player.x = TILE_SIZE * 2;
+          gameState.player.y = TILE_SIZE * 2;
+          gameState.player.vx = 0;
+          gameState.player.vy = 0;
+        }
+
+        function loadLevel(world, level) {
+          if (world >= levels.length || level >= levels[world].length) {
+            console.error(
+              `Attempted to load invalid level: World ${world + 1}, Level ${
+                level + 1
+              }`
+            );
+            if (world >= levels.length) {
+              gameState.status = "win";
+              showMessage(
+                `YOU WIN!\nFinal Score: ${gameState.score}\nPress Jump to Return to Menu`,
+                10000
+              );
+            } else {
+              gameState.status = "menu";
+              showMessage("Error loading level data.", 5000);
+            }
+            return;
+          }
+
+          gameState.currentWorld = world;
+          gameState.currentLevel = level;
+          // Deep copy and split strings into arrays of characters
+          gameState.level = levels[world][level].map((row) => row.split(""));
+
+          if (!gameState.level.length || !gameState.level[0].length) {
+            console.error("Level data is empty!");
+            gameState.status = "menu";
+            showMessage("Error: Empty level data.", 5000);
+            return;
+          }
+
+          gameState.levelHeight = gameState.level.length * TILE_SIZE;
+          gameState.levelWidth = gameState.level[0].length * TILE_SIZE;
+
+          // Spawn Enemies and find player start
+          gameState.enemies = []; // Clear enemies from previous level
+          let playerStartFound = false;
+          for (let y = 0; y < gameState.level.length; y++) {
+            for (let x = 0; x < gameState.level[y].length; x++) {
+              const tileType = gameState.level[y][x];
+              if (tileType === "2") {
+                // Player Start
+                // Set initial position - resetPlayerPosition will finalize it
+                gameState.player.x =
+                  x * TILE_SIZE + (TILE_SIZE - PLAYER_WIDTH) / 2;
+                gameState.player.y =
+                  y * TILE_SIZE + (TILE_SIZE - PLAYER_HEIGHT);
+                playerStartFound = true;
+                // Optional: Visually replace start tile with empty space in the loaded copy
+                // gameState.level[y][x] = '0';
+              } else if (tileType === "6") {
+                // Enemy Spawn Point
+                gameState.enemies.push({
+                  x: x * TILE_SIZE + (TILE_SIZE - ENEMY_WIDTH) / 2,
+                  y: y * TILE_SIZE + (TILE_SIZE - ENEMY_HEIGHT),
+                  vx: -ENEMY_SPEED, // Start moving left
+                  vy: 0,
+                  width: ENEMY_WIDTH,
+                  height: ENEMY_HEIGHT,
+                  isOnGround: false,
+                  type: "walker",
+                  color: "#c0392b", // Pomegranate Red
+                });
+                // Optional: Visually replace enemy spawn tile with empty space
+                // gameState.level[y][x] = '0';
+              }
+            }
+          }
+
+          // Ensure player position is correctly set and velocities reset
+          resetPlayerPosition();
+          if (!playerStartFound) {
+            console.warn(
+              "No player start tile ('2') found! Using fallback position."
+            );
+          }
+
+          gameState.camera.x = 0; // Reset camera
+          gameState.camera.y = 0;
+          gameState.status = "playing";
+          hideMessage(); // Hide any previous messages
+        }
+
+        function nextLevel() {
+          gameState.currentLevel++;
+          if (gameState.currentLevel >= levels[gameState.currentWorld].length) {
+            gameState.currentLevel = 0;
+            gameState.currentWorld++;
+          }
+
+          if (gameState.currentWorld >= levels.length) {
+            gameState.status = "win";
+            showMessage(
+              `YOU WIN!\nFinal Score: ${gameState.score}\nPress Jump to Return to Menu`,
+              10000
+            );
+          } else {
+            gameState.status = "level_transition";
+            showMessage(
+              `World ${gameState.currentWorld + 1} - ${
+                gameState.currentLevel + 1
+              }`,
+              2000
+            );
+            setTimeout(() => {
+              loadLevel(gameState.currentWorld, gameState.currentLevel);
+            }, 1500);
+          }
+        }
+
+        function restartLevel() {
+          gameState.lives--;
+          if (gameState.lives <= 0) {
+            gameState.status = "game_over";
+            showMessage(
+              `GAME OVER\nFinal Score: ${gameState.score}\nPress Jump to Restart`,
+              10000
+            );
+          } else {
+            gameState.status = "level_transition";
+            showMessage(`Lives: ${gameState.lives}`, 1500);
+            setTimeout(() => {
+              // Reload the *same* level
+              loadLevel(gameState.currentWorld, gameState.currentLevel);
+            }, 1500);
+          }
+        }
+
+        // --- Collision Detection ---
+        function checkCollisions() {
+          let player = gameState.player;
+          player.isOnGround = false;
+          player.isTouchingWall = 0; // Reset wall touch status each frame
+          player.canWallJump = false;
+
+          // --- Player vs Tiles Collision ---
+          // Horizontal Collision
+          let expectedX = player.x + player.vx;
+          let yChecks = [
+            player.y,
+            player.y + player.height / 2,
+            player.y + player.height - 1,
+          ];
+
+          for (let checkY of yChecks) {
+            let checkTileX =
+              player.vx > 0
+                ? Math.floor((expectedX + player.width) / TILE_SIZE)
+                : Math.floor(expectedX / TILE_SIZE);
+            let checkTileY = Math.floor(checkY / TILE_SIZE);
+            let tileType = getTile(
+              checkTileX * TILE_SIZE,
+              checkTileY * TILE_SIZE
+            );
+
+            if (isSolidTile(tileType)) {
+              if (player.vx > 0) {
+                expectedX = checkTileX * TILE_SIZE - player.width;
+                player.isTouchingWall = 1;
+              } else if (player.vx < 0) {
+                expectedX = (checkTileX + 1) * TILE_SIZE;
+                player.isTouchingWall = -1;
+              }
+              player.vx = 0;
+              break;
+            }
+          }
+          player.x = expectedX;
+
+          // Vertical Collision
+          let expectedY = player.y + player.vy;
+          let xChecks = [
+            player.x,
+            player.x + player.width / 2,
+            player.x + player.width - 1,
+          ];
+
+          for (let checkX of xChecks) {
+            let checkTileY =
+              player.vy > 0
+                ? Math.floor((expectedY + player.height) / TILE_SIZE)
+                : Math.floor(expectedY / TILE_SIZE);
+            let checkTileX = Math.floor(checkX / TILE_SIZE);
+            let tileType = getTile(
+              checkTileX * TILE_SIZE,
+              checkTileY * TILE_SIZE
+            );
+
+            if (isSolidTile(tileType)) {
+              if (player.vy > 0) {
+                expectedY = checkTileY * TILE_SIZE - player.height;
+                player.isOnGround = true;
+              } else if (player.vy < 0) {
+                expectedY = (checkTileY + 1) * TILE_SIZE;
+              }
+              player.vy = 0;
+              break;
+            }
+          }
+          player.y = expectedY;
+
+          // --- Player vs Enemy Collision ---
+          const playerRect = {
+            x: player.x,
+            y: player.y,
+            width: player.width,
+            height: player.height,
+          };
+          let playerHit = false;
+          let enemiesToRemove = []; // Store indices of enemies to remove
+
+          gameState.enemies.forEach((enemy, index) => {
+            if (playerHit) return;
+
+            const enemyRect = {
+              x: enemy.x,
+              y: enemy.y,
+              width: enemy.width,
+              height: enemy.height,
+            };
+
+            if (
+              playerRect.x < enemyRect.x + enemyRect.width &&
+              playerRect.x + playerRect.width > enemyRect.x &&
+              playerRect.y < enemyRect.y + enemyRect.height &&
+              playerRect.y + playerRect.height > enemyRect.y
+            ) {
+              const stompThreshold = TILE_SIZE * 0.4;
+              if (
+                player.vy > 0.1 && // Moving down (added tolerance)
+                playerRect.y + playerRect.height < enemyRect.y + stompThreshold
+              ) {
+                gameState.score += 50;
+                enemiesToRemove.push(index); // Mark enemy for removal
+                player.vy = JUMP_VELOCITY * 0.6; // Bounce
+                player.isOnGround = false;
+              } else {
+                playerHit = true;
+              }
+            }
+          });
+
+          // Remove stomped enemies (iterate backwards to avoid index issues)
+          for (let i = enemiesToRemove.length - 1; i >= 0; i--) {
+            gameState.enemies.splice(enemiesToRemove[i], 1);
+          }
+
+          if (playerHit) {
+            restartLevel();
+            return; // Stop further checks
+          }
+
+          // --- Check for other tile types (Hazards, Exits, Collectibles) ---
+          let centerX = player.x + player.width / 2;
+          let feetY = player.y + player.height + 1;
+          let midY = player.y + player.height / 2;
+
+          let centerTileX = Math.floor(centerX / TILE_SIZE);
+          let centerTileY = Math.floor(midY / TILE_SIZE);
+          let feetTileY = Math.floor(feetY / TILE_SIZE);
+
+          // Check slightly around center/feet for robustness
+          const checkPoints = [
+            { x: centerX, y: midY }, // Center
+            { x: player.x + 1, y: midY }, // Left middle
+            { x: player.x + player.width - 1, y: midY }, // Right middle
+            { x: centerX, y: player.y + player.height - 1 }, // Near feet inside bbox
+          ];
+
+          let onExit = false;
+          let onHazard = false;
+          let collectiblesToRemove = []; // Store {x, y} of collected items
+
+          for (const point of checkPoints) {
+            const tileX = Math.floor(point.x / TILE_SIZE);
+            const tileY = Math.floor(point.y / TILE_SIZE);
+            const tile = getTile(point.x, point.y);
+
+            if (isHazardTile(tile)) {
+              onHazard = true;
+              break; // Hazard takes priority
+            }
+            if (isExitTile(tile)) {
+              onExit = true;
+            }
+            if (isCollectibleTile(tile)) {
+              // Check if already marked for removal
+              if (
+                !collectiblesToRemove.some(
+                  (c) => c.x === tileX && c.y === tileY
+                )
+              ) {
+                collectiblesToRemove.push({ x: tileX, y: tileY });
+              }
+            }
+          }
+          // Check hazard tile directly below feet as well
+          if (isHazardTile(getTile(centerX, feetY))) {
+            onHazard = true;
+          }
+
+          if (onHazard) {
+            restartLevel();
+            return; // Stop checks
+          }
+          if (onExit) {
+            nextLevel();
+            return; // Stop checks
+          }
+
+          // Process collected items
+          collectiblesToRemove.forEach((c) => {
+            if (
+              c.y >= 0 &&
+              c.y < gameState.level.length &&
+              c.x >= 0 &&
+              c.x < gameState.level[c.y].length
+            ) {
+              if (gameState.level[c.y][c.x] === "5") {
+                // Double check it's still a coin
+                gameState.score += 10;
+                gameState.level[c.y][c.x] = "0"; // Remove the collectible
+              }
+            }
+          });
+
+          // Determine wall jump possibility
+          if (
+            player.isTouchingWall !== 0 &&
+            !player.isOnGround &&
+            player.wallJumpCooldown <= 0
+          ) {
+            player.canWallJump = true;
+          } else {
+            player.canWallJump = false;
+          }
+
+          // Fall out of world check
+          if (player.y > gameState.levelHeight + TILE_SIZE * 5) {
+            // Add buffer
+            restartLevel();
+          }
+        }
+
+        // --- Update Enemies ---
+        function updateEnemies(deltaTime) {
+          let enemiesToRemove = []; // For enemies falling out of world
+          gameState.enemies.forEach((enemy, index) => {
+            // Apply Gravity
+            enemy.vy += GRAVITY;
+            enemy.vy = Math.min(enemy.vy, MAX_FALL_SPEED);
+
+            // Basic Collision & Movement Logic (Walker Type)
+            if (enemy.type === "walker") {
+              let expectedX = enemy.x + enemy.vx;
+              let expectedY = enemy.y + enemy.vy;
+
+              // Horizontal Collision Check (Walls)
+              let wallCheckX =
+                enemy.vx > 0 ? expectedX + enemy.width : expectedX;
+              let wallCheckY = enemy.y + enemy.height / 2; // Check middle height
+              let wallTile = getTile(wallCheckX, wallCheckY);
+
+              // Ground Ahead Check (Ledges)
+              let groundCheckX =
+                enemy.vx > 0 ? expectedX + enemy.width : expectedX; // Point ahead of feet
+              let groundCheckY = enemy.y + enemy.height + 5; // Point below feet
+              let groundAheadTile = getTile(groundCheckX, groundCheckY);
+
+              if (isSolidTile(wallTile) || !isSolidTile(groundAheadTile)) {
+                enemy.vx *= -1; // Turn around
+                expectedX = enemy.x; // Prevent moving into wall/off ledge this frame
+              }
+
+              // Vertical Collision Check (Simplified)
+              let feetY = expectedY + enemy.height;
+              let midX = enemy.x + enemy.width / 2;
+              let groundTile = getTile(midX, feetY);
+
+              enemy.isOnGround = false;
+              if (isSolidTile(groundTile) && enemy.vy >= 0) {
+                expectedY =
+                  Math.floor(feetY / TILE_SIZE) * TILE_SIZE - enemy.height;
+                enemy.vy = 0;
+                enemy.isOnGround = true;
+              }
+
+              enemy.x = expectedX;
+              enemy.y = expectedY;
+            }
+
+            // Check if fallen out of world
+            if (enemy.y > gameState.levelHeight + TILE_SIZE * 5) {
+              enemiesToRemove.push(index);
+            }
+          });
+
+          // Remove enemies fallen out of world
+          for (let i = enemiesToRemove.length - 1; i >= 0; i--) {
+            gameState.enemies.splice(enemiesToRemove[i], 1);
+          }
+        }
+
+        // --- Update Function ---
+        function update(deltaTime) {
+          // DeltaTime is available but not strictly used for physics steps here
+          let player = gameState.player;
+
+          // Handle messages timer
+          if (gameState.messageTimer > 0) {
+            gameState.messageTimer -= 1000 / 60; // Approx ms per frame
+            if (gameState.messageTimer <= 0) {
+              if (
+                gameState.status !== "game_over" &&
+                gameState.status !== "win"
+              ) {
+                hideMessage();
+              }
+            }
+          }
+
+          // State-specific updates
+          if (gameState.status === "menu") {
+            showMessage("Pixel Platformer!\nPress Jump Key to Start", 10000);
+            if (gameState.keys.up) {
+              gameState.status = "level_transition";
+              gameState.lives = 3;
+              gameState.score = 0;
+              gameState.currentWorld = 0;
+              gameState.currentLevel = 0;
+              showMessage(
+                `World ${gameState.currentWorld + 1} - ${
+                  gameState.currentLevel + 1
+                }`,
+                2000
+              );
+              setTimeout(() => {
+                loadLevel(gameState.currentWorld, gameState.currentLevel);
+              }, 1500);
+            }
+            return;
+          } else if (gameState.status === "game_over") {
+            if (gameState.keys.up) {
+              gameState.status = "menu";
+              hideMessage();
+            }
+            return;
+          } else if (gameState.status === "win") {
+            if (gameState.keys.up) {
+              gameState.status = "menu";
+              hideMessage();
+            }
+            return;
+          } else if (gameState.status !== "playing") {
+            return; // Don't update physics if loading/transitioning
+          }
+
+          // --- Player Logic ---
+          // Horizontal Movement
+          if (gameState.keys.left) {
+            player.vx = -MOVE_SPEED;
+            player.facingDirection = -1;
+          } else if (gameState.keys.right) {
+            player.vx = MOVE_SPEED;
+            player.facingDirection = 1;
+          } else {
+            player.vx = 0;
+          }
+
+          // Apply Gravity
+          player.vy += GRAVITY;
+          player.vy = Math.min(player.vy, MAX_FALL_SPEED); // Clamp fall speed
+
+          // Wall Sliding
+          if (
+            player.isTouchingWall !== 0 &&
+            !player.isOnGround &&
+            player.vy > 0
+          ) {
+            player.vy = Math.min(player.vy, WALL_SLIDE_SPEED);
+          }
+
+          // Jumping
+          if (gameState.keys.up) {
+            if (player.isOnGround) {
+              player.vy = JUMP_VELOCITY;
+              player.isOnGround = false;
+              gameState.keys.up = false; // Consume jump input immediately
+            } else if (player.canWallJump) {
+              player.vy = WALL_JUMP_PUSH_Y;
+              player.vx = WALL_JUMP_PUSH_X * -player.isTouchingWall;
+              player.facingDirection = -player.isTouchingWall;
+              player.canWallJump = false;
+              player.wallJumpCooldown = 10; // Frames
+              gameState.keys.up = false; // Consume jump input immediately
+            }
+            // Allow holding jump for slightly higher jumps? (More complex, skip for now)
+            // else {
+            //     // If the key is still held shortly after leaving ground, maybe add slight upward force?
+            // }
+          }
+
+          // Wall Jump Cooldown
+          if (player.wallJumpCooldown > 0) {
+            player.wallJumpCooldown--;
+          }
+
+          // --- Update Enemies ---
+          updateEnemies(deltaTime);
+
+          // --- Collision Detection and Resolution ---
+          // checkCollisions handles position updates based on velocity and collision resolution
+          checkCollisions();
+
+          // --- Camera Update ---
+          const cameraMarginX = BASE_WIDTH * 0.4;
+          const cameraMarginY = BASE_HEIGHT * 0.3;
+
+          // Target X: Center player, clamp within level bounds
+          let targetCamX = player.x + player.width / 2 - BASE_WIDTH / 2;
+          gameState.camera.x = Math.max(
+            0,
+            Math.min(targetCamX, gameState.levelWidth - BASE_WIDTH)
+          );
+
+          // Target Y: Scroll only when player moves near edges
+          let targetCamY = gameState.camera.y;
+          const playerTopEdge = player.y - gameState.camera.y;
+          const playerBottomEdge =
+            player.y + player.height - gameState.camera.y;
+
+          if (playerTopEdge < cameraMarginY) {
+            targetCamY = player.y - cameraMarginY;
+          } else if (playerBottomEdge > BASE_HEIGHT - cameraMarginY) {
+            targetCamY =
+              player.y + player.height - (BASE_HEIGHT - cameraMarginY);
+          }
+          gameState.camera.y = Math.max(
+            0,
+            Math.min(targetCamY, gameState.levelHeight - BASE_HEIGHT)
+          );
+        }
+
+        // --- Rendering Function ---
+        function render() {
+          // Clear Canvas using base dimensions
+          ctx.fillStyle = "#2c3e50"; // Dark Slate Blue background
+          ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
+
+          ctx.save();
+          ctx.translate(-gameState.camera.x, -gameState.camera.y);
+
+          // --- Draw Level Tiles ---
+          const startCol = Math.floor(gameState.camera.x / TILE_SIZE);
+          const endCol = Math.min(
+            startCol + VIEWPORT_WIDTH_TILES + 2,
+            gameState.level[0]?.length || 0
+          );
+          const startRow = Math.floor(gameState.camera.y / TILE_SIZE);
+          const endRow = Math.min(
+            startRow + VIEWPORT_HEIGHT_TILES + 2,
+            gameState.level?.length || 0
+          );
+
+          for (let y = startRow; y < endRow; y++) {
+            // Ensure row exists before trying to access columns
+            if (!gameState.level[y]) continue;
+
+            for (let x = startCol; x < endCol; x++) {
+              // Ensure column exists
+              const tileType = gameState.level[y][x];
+              if (!tileType) continue;
+
+              const tileXPos = x * TILE_SIZE;
+              const tileYPos = y * TILE_SIZE;
+
+              switch (tileType) {
+                case "1": // Solid Block
+                  ctx.fillStyle = "#8B4513"; // Brown
+                  ctx.fillRect(tileXPos, tileYPos, TILE_SIZE, TILE_SIZE);
+                  ctx.strokeStyle = "#5a2d0c"; // Darker brown border
+                  ctx.lineWidth = 1;
+                  ctx.strokeRect(
+                    tileXPos + 0.5,
+                    tileYPos + 0.5,
+                    TILE_SIZE - 1,
+                    TILE_SIZE - 1
+                  );
+                  break;
+                case "3": // Exit
+                  ctx.fillStyle = "#2ecc71"; // Emerald Green
+                  ctx.fillRect(tileXPos, tileYPos, TILE_SIZE, TILE_SIZE);
+                  ctx.fillStyle = "#1abc9c"; // Lighter green detail
+                  ctx.fillRect(
+                    tileXPos + TILE_SIZE * 0.3,
+                    tileYPos + TILE_SIZE * 0.3,
+                    TILE_SIZE * 0.4,
+                    TILE_SIZE * 0.4
+                  );
+                  break;
+                case "4": // Hazard
+                  ctx.fillStyle = "#e74c3c"; // Alizarin Red
+                  ctx.beginPath(); // Simple triangle spike shape
+                  ctx.moveTo(tileXPos, tileYPos + TILE_SIZE);
+                  ctx.lineTo(tileXPos + TILE_SIZE / 2, tileYPos);
+                  ctx.lineTo(tileXPos + TILE_SIZE, tileYPos + TILE_SIZE);
+                  ctx.closePath();
+                  ctx.fill();
+                  break;
+                case "5": // Collectible
+                  ctx.fillStyle = "#f1c40f"; // Sunflower Yellow
+                  ctx.beginPath();
+                  ctx.arc(
+                    tileXPos + TILE_SIZE / 2,
+                    tileYPos + TILE_SIZE / 2,
+                    TILE_SIZE * 0.3,
+                    0,
+                    Math.PI * 2
+                  );
+                  ctx.fill();
+                  ctx.fillStyle = "#f39c12"; // Orange shine
+                  ctx.beginPath();
+                  ctx.arc(
+                    tileXPos + TILE_SIZE * 0.6,
+                    tileYPos + TILE_SIZE * 0.4,
+                    TILE_SIZE * 0.1,
+                    0,
+                    Math.PI * 2
+                  );
+                  ctx.fill();
+                  break;
+                // case '0', '2', '6': Draw nothing (background shows through)
+              }
+            }
+          }
+
+          // --- Draw Enemies ---
+          gameState.enemies.forEach((enemy) => {
+            ctx.fillStyle = enemy.color;
+            ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            // Eye for direction
+            ctx.fillStyle = "#ecf0f1";
+            const eyeX =
+              enemy.vx > 0
+                ? enemy.x + enemy.width * 0.6
+                : enemy.x + enemy.width * 0.1;
+            const eyeY = enemy.y + enemy.height * 0.3;
+            const eyeSize = enemy.width * 0.15;
+            ctx.fillRect(eyeX, eyeY, eyeSize, eyeSize);
+          });
+
+          // --- Draw Player ---
+          let player = gameState.player;
+          ctx.fillStyle = "#3498db"; // Peter River Blue
+          if (player.canWallJump && player.isTouchingWall !== 0)
+            ctx.fillStyle = "#9b59b6"; // Amethyst Purple when wall jump ready
+          ctx.fillRect(player.x, player.y, player.width, player.height);
+          // Eye
+          ctx.fillStyle = "#ecf0f1";
+          const eyeX =
+            player.facingDirection === 1
+              ? player.x + player.width * 0.6
+              : player.x + player.width * 0.1;
+          const eyeY = player.y + player.height * 0.3;
+          const eyeSize = player.width * 0.15;
+          ctx.fillRect(eyeX, eyeY, eyeSize, eyeSize);
+
+          ctx.restore(); // Remove camera translation
+
+          // --- Draw UI Elements (on top of everything, fixed position) ---
+          ctx.fillStyle = "#ecf0f1"; // Clouds White
+          ctx.font = `${TILE_SIZE * 0.9}px PixelFont, monospace`;
+          ctx.textAlign = "left";
+          ctx.fillText(`Score: ${gameState.score}`, 10, TILE_SIZE);
+          ctx.textAlign = "right";
+          ctx.fillText(`Lives: ${gameState.lives}`, BASE_WIDTH - 10, TILE_SIZE);
+          ctx.textAlign = "center";
+          ctx.fillText(
+            `World ${gameState.currentWorld + 1}-${gameState.currentLevel + 1}`,
+            BASE_WIDTH / 2,
+            TILE_SIZE
+          );
+        }
+
+        // --- Screen Resizing and Fullscreen ---
+        function resizeCanvas() {
+          const scaleX = window.innerWidth / BASE_WIDTH;
+          const scaleY = window.innerHeight / BASE_HEIGHT;
+          const scaleToFit = Math.min(scaleX, scaleY);
+
+          const newWidth = Math.floor(BASE_WIDTH * scaleToFit);
+          const newHeight = Math.floor(BASE_HEIGHT * scaleToFit);
+
+          canvas.style.width = `${newWidth}px`;
+          canvas.style.height = `${newHeight}px`;
+
+          // Re-disable smoothing
+          ctx.imageSmoothingEnabled = false;
+        }
+
+        function toggleFullScreen() {
+          if (!document.fullscreenElement) {
+            // Request fullscreen on the document root, usually best
+            document.documentElement.requestFullscreen().catch((err) => {
+              console.error(`Fullscreen Error: ${err.message} (${err.name})`);
+              // Show message if fullscreen fails (e.g., needs user interaction)
+              showMessage(
+                "Fullscreen requires user interaction (like a click).",
+                3000
+              );
+            });
+          } else {
+            if (document.exitFullscreen) {
+              document.exitFullscreen();
+            }
+          }
+        }
+
+        // --- Input Handling ---
+        function handleKeyDown(e) {
+          // Prevent jump key repeating if held down before needed
+          if (
+            (e.key === "ArrowUp" || e.key === "w" || e.key === " ") &&
+            gameState.keys.up
+          ) {
+            // Already holding jump, do nothing until released
+          } else {
+            switch (e.key) {
+              case "ArrowLeft":
+              case "a":
+                gameState.keys.left = true;
+                break;
+              case "ArrowRight":
+              case "d":
+                gameState.keys.right = true;
+                break;
+              case "ArrowUp":
+              case "w":
+              case " ":
+                gameState.keys.up = true;
+                break; // Set jump intent
+              case "f":
+                toggleFullScreen();
+                break; // Fullscreen toggle
+            }
+          }
+
+          // Prevent default browser behavior for game keys
+          if (
+            [
+              "ArrowLeft",
+              "ArrowRight",
+              "ArrowUp",
+              "ArrowDown",
+              " ",
+              "f",
+              "a",
+              "w",
+              "d",
+            ].includes(e.key)
+          ) {
+            e.preventDefault();
+          }
+        }
+
+        function handleKeyUp(e) {
+          switch (e.key) {
+            case "ArrowLeft":
+            case "a":
+              gameState.keys.left = false;
+              break;
+            case "ArrowRight":
+            case "d":
+              gameState.keys.right = false;
+              break;
+            case "ArrowUp":
+            case "w":
+            case " ":
+              gameState.keys.up = false;
+              break; // Clear jump intent on release
+          }
+        }
+
+        // --- Game Loop ---
+        let lastTime = 0;
+        function gameLoop(timestamp) {
+          const deltaTime = timestamp - lastTime;
+          lastTime = timestamp;
+
+          // Limit updates if tab inactive or large delta
+          if (deltaTime < 150) {
+            // Allow slightly larger delta than 100ms
+            update(deltaTime);
+            render();
+          } else {
+            console.log("Skipping frame due to large deltaTime:", deltaTime); // Log if skipping
+          }
+
+          requestAnimationFrame(gameLoop);
+        }
+
+        // --- Initialization ---
+        function init() {
+          // Set Canvas Base Size (Internal Resolution)
+          canvas.width = BASE_WIDTH;
+          canvas.height = BASE_HEIGHT;
+
+          // Initial Resize & Listener
+          window.addEventListener("resize", resizeCanvas);
+          resizeCanvas(); // Call once to set initial scaled size
+
+          // Disable image smoothing
+          ctx.imageSmoothingEnabled = false;
+
+          // Input Listeners
+          window.addEventListener("keydown", handleKeyDown);
+          window.addEventListener("keyup", handleKeyUp);
+
+          // Optional Fullscreen Button Listener
+          /*
+                const fsButton = document.getElementById('fullscreenBtn');
+                if (fsButton) {
+                    fsButton.addEventListener('click', toggleFullScreen);
+                }
+                */
+
+          // Start State
+          gameState.status = "menu";
+
+          // Start Loop
+          lastTime = performance.now();
+          requestAnimationFrame(gameLoop);
+        }
+
+        // --- Start the Game ---
+        init();
+      })(); // End of IIFE
+    </script>
+  </body>
+</html>

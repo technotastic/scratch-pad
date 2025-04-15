@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> <!-- Mobile optimization -->
+    <title>Item Locus - Personal Object Mapper</title>
+    <style>
+        :root {
+            --primary-bg: #f4f7f6;
+            --secondary-bg: #ffffff;
+            --tertiary-bg: #e9ecef;
+            --text-color: #212529;
+            --text-light: #6c757d;
+            --accent-color: #007bff;
+            --accent-dark: #0056b3;
+            --border-color: #dee2e6;
+            --marker-color: #dc3545;
+            --marker-hover: #e74c3c;
+            --marker-selected: #f39c12; /* For tap selection */
+            --shape-color: #adb5bd;
+            --shape-hover: #868e96;
+             --danger-color: #dc3545;
+             --success-color: #28a745;
+            --button-padding: 10px 15px;
+             --button-font-size: 0.95em;
+             --input-padding: 9px 12px;
+            --marker-radius: 6; /* Default radius, updated by JS if needed */
+        }
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent pull-to-refresh issues, etc. */
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            font-size: 16px; /* Base font size */
+        }
+        .app-container {
+            display: flex;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 300px; /* Fixed width on desktop */
+            flex-shrink: 0;
+            background-color: var(--secondary-bg);
+            padding: 20px;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            transition: width 0.3s ease; /* Animation for potential collapse */
+        }
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow: hidden;
+        }
+        .canvas-wrapper { /* Renamed for clarity */
+            position: relative; /* Needed for absolute children */
+            flex-grow: 1; /* Take remaining vertical space */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; /* Important */
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border-radius: 4px;
+            margin-top: 15px;
+             /* Subtle grid background */
+             background-image: linear-gradient(var(--tertiary-bg) 1px, transparent 1px), linear-gradient(90deg, var(--tertiary-bg) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        #mapCanvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain; /* Scale while preserving aspect ratio */
+            cursor: default; /* Default cursor */
+        }
+        /* Popups and overlays */
+        .overlay-popup {
+            position: absolute;
+            background-color: rgba(40, 40, 40, 0.9);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            pointer-events: none; /* Base rule, enable for interactable parts */
+            display: none;
+            z-index: 100;
+            max-width: 250px;
+             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+             white-space: pre-wrap;
+             word-wrap: break-word;
+        }
+        #tooltip { /* Classic hover tooltip for desktop */
+            /* Use base .overlay-popup style */
+        }
+        #itemInteractionPopup {
+            pointer-events: auto; /* Enable interaction */
+        }
+        #itemInteractionPopup button {
+             font-size: 0.85em; padding: 4px 8px; margin-top: 8px; margin-right: 5px;
+         }
+        #inlineInputWrapper {
+            position: absolute;
+             z-index: 101;
+             display: none;
+             padding: 5px;
+             background-color: var(--secondary-bg);
+             border: 1px solid var(--accent-color);
+             border-radius: 4px;
+             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        #inlineInput { font-size: 0.9em; padding: 5px; border: none; outline: none; width: 150px;}
+
+        /* Sidebar & Controls styling */
+        h1, h2, h3 { margin-top: 0; margin-bottom: 0.7em; color: #343a40; }
+        .sidebar h2 { font-size: 1.4em; }
+        .sidebar h3 { font-size: 1.1em; margin-top: 1.2em; border-top: 1px solid var(--tertiary-bg); padding-top: 1em; }
+
+        label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9em; color: var(--text-light); }
+        input[type="text"], input[type="search"], select {
+            width: 100%;
+            padding: var(--input-padding);
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1em;
+            box-sizing: border-box;
+             transition: border-color 0.2s ease-in-out;
+        }
+        input[type="text"]:focus, input[type="search"]:focus { border-color: var(--accent-color); outline: none; }
+        button {
+            padding: var(--button-padding);
+            font-size: var(--button-font-size);
+            color: #fff;
+            background-color: var(--accent-color);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            margin-right: 8px; margin-bottom: 8px;
+             -webkit-tap-highlight-color: transparent; /* Remove tap highlight */
+             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        button:hover { filter: brightness(110%); }
+         button:active { filter: brightness(90%); box-shadow: inset 0 1px 2px rgba(0,0,0,0.15);}
+        button.secondary { background-color: #6c757d; }
+        button.danger { background-color: var(--danger-color); }
+        button:disabled { background-color: #adb5bd; cursor: not-allowed; filter: none; box-shadow: none; }
+
+        .help-text { display: block; font-size: 0.8em; color: var(--text-light); margin-top: -5px; margin-bottom: 10px; }
+        .sr-only { /* For screen reader only labels */
+             position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+             overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0;
+        }
+        #locationList { list-style: none; padding: 0; margin: 0; }
+        #locationList li {
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.15s;
+            border: 1px solid transparent;
+        }
+        #locationList li:hover { background-color: var(--tertiary-bg); }
+        #locationList li.active { background-color: var(--accent-dark); color: white; font-weight: 500; border-color: var(--accent-color);}
+         #locationList li button { font-size: 0.75em; padding: 3px 6px; background-color: rgba(255, 255, 255, 0.2); color: white; }
+         #locationList li:not(.active) button { background-color: #e9ecef; color: var(--text-light); } /* Non-active delete btn style */
+         #locationList li:not(.active) button:hover { background-color: #dc3545; color: white; }
+
+         .main-controls-bar { /* Controls above canvas */
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+             margin-bottom: 10px;
+         }
+         .main-controls-bar span { font-size: 0.9em; color: var(--text-light); margin-right: 5px;}
+        .tool-buttons button { background-color: var(--secondary-bg); color: var(--text-color); border: 1px solid var(--border-color);}
+        .tool-buttons button.active { background-color: var(--accent-dark); color: white; border-color: var(--accent-dark); }
+
+         #searchSection { margin-top: auto; /* Push search to bottom */ padding-top: 15px; border-top: 1px solid var(--tertiary-bg); }
+         #searchResults { font-size: 0.9em; max-height: 150px; overflow-y: auto; margin-top: 5px; background-color: #f8f9fa; border-radius: 4px;}
+         #searchResults div { padding: 5px 8px; border-bottom: 1px dotted var(--border-color); cursor: pointer;}
+         #searchResults div:last-child { border-bottom: none; }
+         #searchResults div:hover { background-color: var(--tertiary-bg);}
+         #searchResults div.highlight { background-color: var(--marker-hover); color: white; animation: flash 0.5s ease-out; }
+
+         @keyframes flash { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            :root { --marker-radius: 7; } /* Slightly larger markers for touch */
+            .sidebar { width: 220px; padding: 15px; }
+            h1, h2 { font-size: 1.2em; } .sidebar h2 {font-size: 1.1em;} .sidebar h3 { font-size: 1em; }
+             #locationList li { padding: 8px 10px; font-size: 0.95em; }
+             #locationList li button { font-size: 0.7em; padding: 2px 5px;}
+            .main-content { padding: 15px; }
+            button { padding: 8px 12px; font-size: 0.9em; }
+            input { font-size: 0.95em; padding: 8px 10px; }
+        }
+        @media (max-width: 480px) {
+             :root { --marker-radius: 8; } /* Even larger markers */
+            .app-container { flex-direction: column; }
+            .sidebar {
+                width: 100%;
+                height: 280px; /* Adjusted height, maybe auto is better? depends on content */
+                 border-right: none; border-bottom: 1px solid var(--border-color);
+                padding: 10px;
+                 overflow-y: auto; /* Ensure scrolling works */
+                box-sizing: border-box;
+                height: auto; /* Let content define height */
+                max-height: 40vh; /* Limit sidebar height on small screens */
+                flex-shrink: 0;
+             }
+             #searchSection { margin-top: 15px;} /* Remove push to bottom on mobile column layout */
+            .main-content { padding: 10px; flex-grow: 1; } /* Allow main content to take rest */
+            h1,h2 { font-size: 1.1em; } .sidebar h2 { font-size: 1.1em; }
+             #locationList li { padding: 6px 8px; font-size: 0.9em; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="sidebar">
+            <h2 title="Manage your saved locations">Item Locus</h2>
+
+            <div class="location-add-form">
+                <label for="newLocationName">New Location:</label>
+                <input type="text" id="newLocationName" placeholder="e.g., Bookshelf">
+                <span class="help-text">Name for a space (desk, drawer, etc.).</span>
+                <button id="addLocationBtn" title="Add this new location">Add Location</button>
+            </div>
+
+            <h3 title="Your saved locations">Your Locations</h3>
+            <ul id="locationList">
+                <!-- Location items will be populated here -->
+                <li><span class="help-text">Getting Started: Add a location using the form above.</span></li>
+            </ul>
+
+            <div id="searchSection">
+                 <h3>Search Items</h3>
+                 <label for="searchInput" class="sr-only">Search Notes:</label> <!-- Hidden label for accessibility -->
+                <input type="search" id="searchInput" placeholder="Search notes..." title="Search item notes across all locations">
+                <div id="searchResults"></div>
+            </div>
+        </div>
+
+        <div class="main-content">
+             <h2 id="currentLocationName">Select or Add a Location</h2>
+
+            <div class="main-controls-bar" id="controlsBar" style="display: none;">
+                 <span title="Select interaction mode">Tool:</span>
+                 <div class="tool-buttons">
+                     <button id="toolSelectBtn" class="active" title="Select, move, add items or shapes">Select/Place</button>
+                     <button id="toolDrawRectBtn" title="Draw a rectangle shape">Draw Rect</button>
+                     <button id="toolDrawLineBtn" title="Draw a line shape">Draw Line</button>
+                 </div>
+                 <span id="currentToolStatus" class="help-text" style="margin: 0 0 0 10px;">Tap map to place/select.</span>
+                 <button id="clearMapBtn" class="danger secondary" style="margin-left: auto;" title="Delete ALL items and shapes from this location map" disabled>Clear Map</button>
+            </div>
+
+            <div class="canvas-wrapper" id="canvasWrapper">
+                <canvas id="mapCanvas"></canvas>
+                 <div id="tooltip" class="overlay-popup"></div> <!-- Desktop Hover Tooltip -->
+                 <div id="itemInteractionPopup" class="overlay-popup"> <!-- Mobile Tap Interaction -->
+                     <strong id="interactionPopupNote" style="display:block; margin-bottom: 5px;"></strong>
+                     <div style="margin-top: 8px;">
+                         <!-- Edit button functionality is currently a placeholder -->
+                         <button id="interactionPopupEditBtn" class="secondary" title="Edit note (feature pending)" style="display: none;">Edit</button>
+                         <button id="interactionPopupDeleteBtn" class="danger" title="Delete this item/shape">Delete</button>
+                     </div>
+                 </div>
+                 <div id="inlineInputWrapper"> <!-- Inline input for adding items -->
+                     <input type="text" id="inlineInput" placeholder="Item note...">
+                     <span class="help-text" style="font-size: 0.75em; margin-top: 3px;">Enter to save, Esc to cancel.</span>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const canvas = document.getElementById('mapCanvas');
+        const ctx = canvas.getContext('2d');
+        const canvasWrapper = document.getElementById('canvasWrapper');
+        const tooltip = document.getElementById('tooltip');
+        const itemInteractionPopup = document.getElementById('itemInteractionPopup');
+        const interactionPopupNote = document.getElementById('interactionPopupNote');
+        const interactionPopupDeleteBtn = document.getElementById('interactionPopupDeleteBtn');
+        const interactionPopupEditBtn = document.getElementById('interactionPopupEditBtn'); // Placeholder
+        const inlineInputWrapper = document.getElementById('inlineInputWrapper');
+        const inlineInput = document.getElementById('inlineInput');
+
+        const locationListUl = document.getElementById('locationList');
+        const newLocationNameInput = document.getElementById('newLocationName');
+        const addLocationBtn = document.getElementById('addLocationBtn');
+        const currentLocationNameH2 = document.getElementById('currentLocationName');
+        const controlsBar = document.getElementById('controlsBar');
+        const currentToolStatus = document.getElementById('currentToolStatus');
+        const searchInput = document.getElementById('searchInput');
+        const searchResultsDiv = document.getElementById('searchResults');
+        const clearMapBtn = document.getElementById('clearMapBtn');
+
+        // Tool buttons
+        const toolSelectBtn = document.getElementById('toolSelectBtn');
+        const toolDrawRectBtn = document.getElementById('toolDrawRectBtn');
+        const toolDrawLineBtn = document.getElementById('toolDrawLineBtn');
+
+        // --- Constants ---
+        const STORAGE_KEY_LOCATIONS = 'itemLocusLocations_v2'; // Use versioned key
+        let MARKER_RADIUS = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--marker-radius')) || 6; // Dynamic radius
+        const SHAPE_LINE_WIDTH = 2;
+        const CANVAS_WIDTH = 800; // Internal canvas resolution (X)
+        const CANVAS_HEIGHT = 600; // Internal canvas resolution (Y)
+        const HOVER_TOLERANCE = 5; // Pixel tolerance for hovering over shapes
+        const TAP_VS_DRAG_THRESHOLD_SQ = 25; // Squared distance (pixels^2) to differentiate tap vs drag
+
+        // --- App State ---
+        let locations = {}; // Main data store: { "locName": { items: [], shapes: [] }, ... }
+        let currentTool = 'select'; // Current interaction mode: 'select', 'drawRect', 'drawLine'
+        let selectedLocation = null; // The currently active location name
+        let activeInteraction = null; // Info about the ongoing pointer interaction (drag, draw, etc.)
+        let currentPointerPos = { canvasX: 0, canvasY: 0, clientX: 0, clientY: 0, canvasClientX: 0, canvasClientY: 0 }; // Last known pointer coordinates (multi-format)
+        let interactionStartPos = { canvasX: 0, canvasY: 0, clientX: 0, clientY: 0, canvasClientX: 0, canvasClientY: 0 }; // Where the current interaction began
+        let selectedItemForPopup = null; // Details of the item/shape whose interaction popup is visible
+        let temporaryHighlightItem = null; // Item to temporarily highlight from search results: { locName, index }
+
+        // --- Initialization ---
+        function init() {
+            canvas.width = CANVAS_WIDTH;
+            canvas.height = CANVAS_HEIGHT;
+            loadLocations();
+            addEventListeners();
+            selectLocation(Object.keys(locations)[0] || null); // Attempt to select the first location if one exists
+            switchTool('select'); // Set the default tool
+            updateMarkerRadiusFromCSS(); // Ensure marker radius is correctly set based on initial CSS
+            console.log("Item Locus Initialized");
+        }
+
+        // Update marker radius if CSS variable changes (e.g., due to media query)
+        function updateMarkerRadiusFromCSS() {
+             const newRadius = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--marker-radius')) || 6;
+             if (newRadius !== MARKER_RADIUS) {
+                 MARKER_RADIUS = newRadius;
+                 console.log("Marker radius updated to:", MARKER_RADIUS);
+                 drawCurrentLocation(); // Redraw needed if size changes
+            }
+        }
+
+        // --- Canvas & Drawing Logic ---
+        function drawMarker(item, index, isSelected) {
+            ctx.beginPath();
+            ctx.arc(item.x, item.y, MARKER_RADIUS, 0, Math.PI * 2);
+            // Use distinct fill/stroke for selection state vs normal state
+            ctx.fillStyle = isSelected ? 'var(--marker-selected)' : 'var(--marker-color)';
+             ctx.fill();
+             ctx.strokeStyle = isSelected ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)';
+            ctx.lineWidth = isSelected ? 2 : 1; // Thicker stroke when selected
+            ctx.stroke();
+
+             // Add temporary highlight overlay if needed (e.g., from search result click)
+             if(temporaryHighlightItem && temporaryHighlightItem.locName === selectedLocation && temporaryHighlightItem.index === index) {
+                ctx.strokeStyle = 'var(--marker-hover)'; // Use hover color for temporary flash
+                 ctx.lineWidth = 3; // Make it obvious
+                 ctx.stroke(); // Draw highlight stroke
+             }
+        }
+
+        function drawShape(shape, index, isHovered) {
+            // Determine style based on whether this shape's popup is active or just hovered
+             const isPopupTarget = selectedItemForPopup?.type === 'shape' && selectedItemForPopup.index === index;
+             ctx.strokeStyle = isPopupTarget ? 'var(--accent-dark)' : (isHovered ? 'var(--shape-hover)' : 'var(--shape-color)');
+             ctx.lineWidth = isPopupTarget ? SHAPE_LINE_WIDTH + 1 : SHAPE_LINE_WIDTH; // Slightly thicker if selected via popup
+
+            ctx.beginPath();
+            if (shape.type === 'rect') {
+                 ctx.rect(shape.x1, shape.y1, shape.x2 - shape.x1, shape.y2 - shape.y1);
+            } else if (shape.type === 'line') {
+                 ctx.moveTo(shape.x1, shape.y1);
+                 ctx.lineTo(shape.x2, shape.y2);
+            }
+            ctx.stroke();
+        }
+
+        function drawCurrentLocation() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas first
+            if (!selectedLocation || !locations[selectedLocation]) return; // Don't draw if no location is selected
+
+            const loc = locations[selectedLocation];
+            const hoveredShapeIndex = getHoveredShapeIndex(currentPointerPos.canvasX, currentPointerPos.canvasY);
+
+            // Draw shapes first (typically the background elements)
+            loc.shapes.forEach((shape, index) => {
+                const isShapeHovered = index === hoveredShapeIndex && activeInteraction === null;
+                drawShape(shape, index, isShapeHovered)
+            });
+
+            // Draw items (markers) on top
+            loc.items.forEach((item, index) => {
+                 // Determine if this item's popup is active
+                 const isItemPopupTarget = selectedItemForPopup?.type === 'item' && selectedItemForPopup.index === index;
+                 drawMarker(item, index, isItemPopupTarget) // Pass selection state to drawMarker
+            });
+
+             // Draw temporary visual feedback for drawing actions (e.g., rubber-banding rectangle/line)
+             if (activeInteraction?.type === 'draw' && activeInteraction.startX !== undefined) {
+                 ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                 ctx.lineWidth = 1;
+                 ctx.setLineDash([4, 4]); // Dashed line for temporary drawing
+                 ctx.beginPath();
+                 if (activeInteraction.shape === 'rect') {
+                     ctx.rect(activeInteraction.startX, activeInteraction.startY, currentPointerPos.canvasX - activeInteraction.startX, currentPointerPos.canvasY - activeInteraction.startY);
+                 } else if (activeInteraction.shape === 'line') {
+                     ctx.moveTo(activeInteraction.startX, activeInteraction.startY);
+                     ctx.lineTo(currentPointerPos.canvasX, currentPointerPos.canvasY);
+                 }
+                 ctx.stroke();
+                 ctx.setLineDash([]); // Reset line dash style
+            }
+
+            // Show desktop hover tooltip if conditions met (desktop, no interaction, no tap popup visible)
+            const hoveredItemIndex = getHoveredItemIndex(currentPointerPos.canvasX, currentPointerPos.canvasY); // Check hover again
+            if (!isTouchDevice() && activeInteraction === null && (!itemInteractionPopup.style.display || itemInteractionPopup.style.display === 'none')) {
+                 if (hoveredItemIndex !== -1) {
+                     showTooltip(currentPointerPos.canvasClientX, currentPointerPos.canvasClientY, loc.items[hoveredItemIndex].note);
+                 } else {
+                     hideTooltip();
+                }
+             } else { hideTooltip(); } // Ensure desktop tooltip is hidden on touch or during interactions
+        }
+
+        // --- State Management (CRUD for locations, items, shapes) ---
+        function loadLocations() {
+            const stored = localStorage.getItem(STORAGE_KEY_LOCATIONS);
+            try {
+                 locations = stored ? JSON.parse(stored) : {};
+                 // Ensure schema integrity (items/shapes arrays must exist)
+                Object.values(locations).forEach(loc => {
+                    loc.items = loc.items || [];
+                    loc.shapes = loc.shapes || [];
+                 });
+            } catch (e) {
+                console.error("Error parsing locations from localStorage:", e);
+                locations = {}; // Reset to empty if storage is corrupt
+            }
+             updateLocationListUI(); // Refresh the sidebar list
+        }
+
+        function saveLocations() {
+            try {
+                 localStorage.setItem(STORAGE_KEY_LOCATIONS, JSON.stringify(locations));
+            } catch (e) {
+                 console.error("Error saving locations to localStorage:", e);
+                 alert("Error saving data! Local storage might be full or disabled.");
+            }
+        }
+
+        function addLocation(name) {
+            if (!name) {
+                alert("Please enter a location name.");
+                return;
+            }
+            if (locations[name]) {
+                alert(`Location "${name}" already exists.`);
+                return;
+            }
+            locations[name] = { items: [], shapes: [] }; // Create new location entry
+            saveLocations();
+            updateLocationListUI();
+            selectLocation(name); // Automatically select the new location
+            newLocationNameInput.value = ''; // Clear the input field
+        }
+
+        function deleteLocation(name) {
+            if (!locations[name]) return; // Ignore if location doesn't exist
+            // Confirmation dialog
+            if (confirm(`Are you sure you want to delete location "${name}" and all its items/shapes? This cannot be undone.`)) {
+                delete locations[name]; // Remove from data store
+                if (selectedLocation === name) {
+                    selectLocation(null); // If deleting the active location, deselect it
+                }
+                saveLocations();
+                updateLocationListUI(); // Refresh the list
+            }
+        }
+
+        function addItem(x, y, note) {
+            if (!selectedLocation || !note) return; // Need a selected location and a note
+             // Optional: Prevent adding items outside canvas bounds?
+            // x = Math.max(0, Math.min(CANVAS_WIDTH, x));
+            // y = Math.max(0, Math.min(CANVAS_HEIGHT, y));
+            locations[selectedLocation].items.push({ x, y, note });
+            saveLocations();
+            drawCurrentLocation(); // Redraw to show the new item
+        }
+
+        function addShape(type, x1, y1, x2, y2) {
+            if (!selectedLocation) return;
+            // Avoid zero-size or negligible shapes
+            if (Math.abs(x1 - x2) < 2 && Math.abs(y1 - y2) < 2) return;
+            locations[selectedLocation].shapes.push({ type, x1, y1, x2, y2 });
+            saveLocations();
+            drawCurrentLocation();
+         }
+
+        function deleteSelectedItem() {
+            if (!selectedLocation || !selectedItemForPopup) return; // Safety checks
+            const loc = locations[selectedLocation];
+            const { type, index } = selectedItemForPopup;
+
+            let itemOrShapeText = ''; // For confirmation message
+            if (type === 'item' && index >= 0 && index < loc.items.length) {
+                 itemOrShapeText = `item "${loc.items[index].note.substring(0, 20)}..."`; // Use part of note
+            } else if (type === 'shape' && index >= 0 && index < loc.shapes.length) {
+                itemOrShapeText = `this ${loc.shapes[index].type} shape`;
+            } else { return; } // Invalid target
+
+             // Ask for confirmation
+            if (confirm(`Are you sure you want to delete ${itemOrShapeText}?`)) {
+                if (type === 'item') {
+                    loc.items.splice(index, 1);
+                } else if (type === 'shape') {
+                     loc.shapes.splice(index, 1);
+                 }
+                saveLocations();
+                 hideItemInteractionPopup(); // Close the popup after deletion
+                 drawCurrentLocation(); // Redraw the map
+            } else {
+                // If cancel, optionally keep the popup open or close it? Closing is simpler.
+                hideItemInteractionPopup();
+            }
+        }
+
+        // Select a location to view/edit its map
+        function selectLocation(name) {
+            hideItemInteractionPopup(); // Hide popups when changing context
+            hideInlineInput();
+            cancelActiveInteraction(); // Cancel any ongoing drag/draw
+            selectedLocation = name; // Update state
+
+            if (name && locations[name]) {
+                currentLocationNameH2.textContent = `Map: ${name}`; // Update title
+                controlsBar.style.display = 'flex'; // Show controls
+                clearMapBtn.disabled = false; // Enable clear button
+            } else {
+                currentLocationNameH2.textContent = "Select or Add a Location"; // Reset title
+                controlsBar.style.display = 'none'; // Hide controls
+                selectedLocation = null; // Ensure state is null if selection is invalid/cleared
+                 clearMapBtn.disabled = true; // Disable clear button
+            }
+            updateLocationListUI(); // Refresh sidebar to show active selection
+            drawCurrentLocation(); // Draw the map for the selected location (or clear if none)
+            temporaryHighlightItem = null; // Clear any temporary highlight from search
+         }
+
+        // Change the active drawing/interaction tool
+        function switchTool(newTool) {
+            cancelActiveInteraction(); // Ensure no actions are pending
+            currentTool = newTool; // Set the new tool state
+
+            // Update button visual states (active class)
+             [toolSelectBtn, toolDrawRectBtn, toolDrawLineBtn].forEach(btn => btn.classList.remove('active'));
+            if (newTool === 'select') toolSelectBtn.classList.add('active');
+            else if (newTool === 'drawRect') toolDrawRectBtn.classList.add('active');
+            else if (newTool === 'drawLine') toolDrawLineBtn.classList.add('active');
+
+             // Update help text and cursor style
+             if (newTool === 'select') {
+                 currentToolStatus.textContent = 'Tap item/shape to interact, tap empty space to place, drag item to move.';
+                 canvas.style.cursor = 'default'; // Standard cursor for selection/placing
+            } else {
+                 currentToolStatus.textContent = `Tap & drag on map to draw a ${newTool === 'drawRect' ? 'rectangle' : 'line'}.`;
+                 canvas.style.cursor = 'crosshair'; // Crosshair cursor for drawing
+            }
+        }
+
+         // Cancel any ongoing interaction (drag, draw, input)
+         function cancelActiveInteraction() {
+             if(activeInteraction?.type === 'inlineInput') { hideInlineInput(); }
+             activeInteraction = null; // Clear interaction state
+             hideItemInteractionPopup(); // Hide popups
+             canvas.style.cursor = (currentTool === 'select') ? 'default' : 'crosshair'; // Reset cursor based on *current* tool
+             drawCurrentLocation(); // Redraw to clear temporary visuals (drag shadow, drawing line)
+         }
+
+
+        // --- UI Updates (Popups, Tooltips, Lists) ---
+        function updateLocationListUI() {
+            locationListUl.innerHTML = ''; // Clear existing list items
+            const names = Object.keys(locations).sort(); // Get sorted location names
+
+            if (names.length === 0) {
+                 // Show helper message if no locations exist yet
+                locationListUl.innerHTML = '<li><span class="help-text" style="padding: 10px 12px;">Getting Started: Add a location using the form above.</span></li>';
+                return;
+            }
+
+            names.forEach(name => {
+                const li = document.createElement('li');
+                li.textContent = name;
+                li.dataset.locationName = name; // Store name for event handling
+                li.title = `Select location: ${name}`; // Tooltip for desktop
+
+                 if (name === selectedLocation) {
+                    li.classList.add('active'); // Highlight the active location
+                 }
+
+                 // Add a delete button for each location
+                 const delBtn = document.createElement('button');
+                delBtn.textContent = 'Del';
+                delBtn.classList.add('danger'); // Use danger class for delete styling
+                 delBtn.title = `Delete location: ${name}`;
+                 // Prevent click on list item when delete button is clicked
+                delBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteLocation(name);
+                };
+
+                li.appendChild(delBtn);
+                 // Set click handler for selecting the location
+                 li.onclick = () => selectLocation(name);
+                locationListUl.appendChild(li);
+            });
+        }
+
+         function showTooltip(clientX, clientY, text) {
+             // Use clientX/Y relative to viewport for tooltip positioning
+             const rect = canvas.getBoundingClientRect();
+             tooltip.style.left = `${clientX - rect.left + 15}px`; // Position relative to canvas origin
+             tooltip.style.top = `${clientY - rect.top + 15}px`;
+            tooltip.textContent = text;
+            tooltip.style.display = 'block';
+        }
+
+        function hideTooltip() { tooltip.style.display = 'none'; }
+
+        // Shows the interaction popup (usually on tap)
+         function showItemInteractionPopup(targetType, index, clientX, clientY) {
+            hideTooltip(); // Don't show both tooltip and popup
+            hideInlineInput(); // Hide input field if it was open
+            if (!selectedLocation || !locations[selectedLocation]) return;
+
+            const loc = locations[selectedLocation];
+             let target; let note = ''; let targetPos = { x: 0, y: 0 }; // Canvas coordinates of target
+
+            // Get target details based on type and index
+             if (targetType === 'item' && index >= 0 && index < loc.items.length) {
+                 target = loc.items[index];
+                 note = target.note;
+                 targetPos = { x: target.x, y: target.y };
+             } else if (targetType === 'shape' && index >= 0 && index < loc.shapes.length) {
+                 target = loc.shapes[index];
+                 note = `Shape (${target.type})`; // Shapes don't have notes
+                 // Calculate approx center for popup
+                 targetPos = { x: (target.x1 + target.x2) / 2, y: (target.y1 + target.y2) / 2 };
+            } else { return; } // Invalid target index
+
+            // Store info about what the popup refers to
+            selectedItemForPopup = { type: targetType, index: index, x: targetPos.x, y: targetPos.y };
+
+            interactionPopupNote.textContent = note; // Display the note or shape type
+            // Configure delete button click handler
+            interactionPopupDeleteBtn.onclick = () => { deleteSelectedItem(); };
+             // Configure edit button (placeholder for now)
+             interactionPopupEditBtn.onclick = () => { alert('Edit item note (not implemented yet).'); };
+            // Show 'Edit' button only for items (which have notes)
+            interactionPopupEditBtn.style.display = (targetType === 'item') ? 'inline-block' : 'none';
+
+            // Position the popup near the tap location (clientX, clientY)
+            const canvasRect = canvas.getBoundingClientRect();
+            // Calculate position relative to the canvas container div
+            let popupX = clientX - canvasRect.left + 15;
+            let popupY = clientY - canvasRect.top + 15;
+
+             // Crude check to prevent popup going off-screen within the canvas wrapper
+             const wrapperWidth = canvasWrapper.clientWidth;
+             const wrapperHeight = canvasWrapper.clientHeight;
+             const popupEstWidth = 200; // Estimate popup size
+             const popupEstHeight = 80;
+             if (popupX + popupEstWidth > wrapperWidth) popupX = clientX - canvasRect.left - popupEstWidth - 15;
+             if (popupY + popupEstHeight > wrapperHeight) popupY = clientY - canvasRect.top - popupEstHeight - 15;
+            if (popupX < 10) popupX = 10; // Keep some padding from edges
+             if (popupY < 10) popupY = 10;
+
+            itemInteractionPopup.style.left = `${popupX}px`;
+            itemInteractionPopup.style.top = `${popupY}px`;
+            itemInteractionPopup.style.display = 'block'; // Make it visible
+
+            drawCurrentLocation(); // Redraw needed to highlight the selected item/shape
+        }
+
+        function hideItemInteractionPopup() {
+            if (itemInteractionPopup.style.display !== 'none') {
+                 itemInteractionPopup.style.display = 'none';
+                selectedItemForPopup = null; // Clear the reference
+                 drawCurrentLocation(); // Redraw needed to remove highlight
+             }
+        }
+
+         // Show the inline input field for adding a new item note
+         function showInlineInput(canvasX, canvasY) {
+            hideItemInteractionPopup(); // Ensure other popups are closed
+            // Set interaction state, storing the canvas coords where input was triggered
+            activeInteraction = { type: 'inlineInput', x: canvasX, y: canvasY };
+
+            // Calculate the desired screen position for the input field
+            const wrapperRect = canvasWrapper.getBoundingClientRect();
+            const canvasRect = canvas.getBoundingClientRect();
+             // Determine scaling factor between canvas buffer and displayed size
+            const scaleX = canvasRect.width / canvas.width;
+            const scaleY = canvasRect.height / canvas.height;
+            // Map the canvas coordinates (canvasX, canvasY) to the client coordinates within the viewport
+            let clientX = canvasRect.left + canvasX * scaleX;
+            let clientY = canvasRect.top + canvasY * scaleY;
+
+            // Position the input wrapper slightly above and centered on the target coordinates
+            // Need to account for wrapper's own size for centering - requires slight delay or pre-calculation
+             inlineInputWrapper.style.display = 'block'; // Make visible first to calculate size if needed
+            let inputWidth = inlineInputWrapper.offsetWidth || 160;
+            let inputHeight = inlineInputWrapper.offsetHeight || 40;
+             inlineInputWrapper.style.left = `${clientX - wrapperRect.left - inputWidth / 2}px`;
+             inlineInputWrapper.style.top = `${clientY - wrapperRect.top - inputHeight - 10}px`; // Position above tap/click point
+
+             inlineInput.value = ''; // Clear previous text
+             inlineInput.focus(); // Focus the input field automatically
+         }
+
+        // Hide the inline input field
+        function hideInlineInput() {
+             // Only hide if it's currently the active interaction
+            if(activeInteraction?.type === 'inlineInput') {
+                inlineInput.blur();
+                inlineInputWrapper.style.display = 'none';
+                 activeInteraction = null; // Clear interaction state
+             }
+        }
+
+        // Save the item note from the inline input field
+         function commitInlineInput() {
+             const note = inlineInput.value.trim();
+             // Only add item if interaction state is correct and note is not empty
+            if (note && activeInteraction?.type === 'inlineInput') {
+                 addItem(activeInteraction.x, activeInteraction.y, note);
+             }
+             hideInlineInput(); // Hides input and resets interaction state
+         }
+
+
+        // --- Event Handlers (Pointer/Mouse/Touch, Buttons, Input) ---
+
+        // Get pointer coordinates in multiple formats from a mouse or touch event
+        function getPointerPos(event) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX = 0, clientY = 0;
+
+            // Extract client coordinates based on event type
+            if (event.touches && event.touches.length > 0) { // Active touch
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+            } else if (event.changedTouches && event.changedTouches.length > 0) { // Touch end
+                clientX = event.changedTouches[0].clientX;
+                clientY = event.changedTouches[0].clientY;
+            } else { // Mouse event
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+
+            // Calculate scaling between canvas element size and internal buffer size
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            // Return coordinates in different formats
+            return {
+                canvasX: (clientX - rect.left) * scaleX,   // Coordinates relative to canvas buffer (0,0 top-left)
+                canvasY: (clientY - rect.top) * scaleY,
+                clientX: clientX,                       // Viewport coordinates
+                clientY: clientY,
+                canvasClientX: clientX - rect.left,      // Coordinates relative to canvas element top-left (for popups)
+                canvasClientY: clientY - rect.top,
+            };
+        }
+
+        // Find the index of the item marker under the given canvas coordinates
+        function getHoveredItemIndex(canvasX, canvasY, tolerance = MARKER_RADIUS) {
+            if (!selectedLocation || !locations[selectedLocation]) return -1;
+            const items = locations[selectedLocation].items;
+            // Search backwards so items drawn last (on top) are checked first
+            for (let i = items.length - 1; i >= 0; i--) {
+                const item = items[i];
+                const dx = canvasX - item.x;
+                const dy = canvasY - item.y;
+                // Simple circular hit test using squared distance for efficiency
+                if (dx * dx + dy * dy < tolerance * tolerance) {
+                    return i; // Found an item within tolerance
+                }
+            }
+            return -1; // No item found at this position
+        }
+
+        // Find index of shape under cursor (simplified check)
+        function getHoveredShapeIndex(canvasX, canvasY, tolerance = HOVER_TOLERANCE) {
+            if (!selectedLocation || !locations[selectedLocation]) return -1;
+            const shapes = locations[selectedLocation].shapes;
+             // Check shapes in reverse order (last drawn = potentially on top)
+            for (let i = shapes.length - 1; i >= 0; i--) {
+                const shape = shapes[i];
+                 if (shape.type === 'rect') {
+                    const minX = Math.min(shape.x1, shape.x2); const maxX = Math.max(shape.x1, shape.x2);
+                     const minY = Math.min(shape.y1, shape.y2); const maxY = Math.max(shape.y1, shape.y2);
+                      // Check if near any edge of the rectangle
+                     if (
+                        (Math.abs(canvasX - minX) < tolerance && canvasY >= minY - tolerance && canvasY <= maxY + tolerance) ||
+                        (Math.abs(canvasX - maxX) < tolerance && canvasY >= minY - tolerance && canvasY <= maxY + tolerance) ||
+                        (Math.abs(canvasY - minY) < tolerance && canvasX >= minX - tolerance && canvasX <= maxX + tolerance) ||
+                        (Math.abs(canvasY - maxY) < tolerance && canvasX >= minX - tolerance && canvasX <= maxX + tolerance)
+                    ) { return i; }
+                } else if (shape.type === 'line') {
+                     // Check if point is near the line segment (more complex calculation)
+                     const x1 = shape.x1, y1 = shape.y1, x2 = shape.x2, y2 = shape.y2;
+                     const lenSq = (x2 - x1)**2 + (y2 - y1)**2;
+                      if (lenSq === 0) continue; // Ignore zero-length lines
+
+                     // Project point onto the line (parameter t)
+                     let t = ((canvasX - x1) * (x2 - x1) + (canvasY - y1) * (y2 - y1)) / lenSq;
+                     t = Math.max(0, Math.min(1, t)); // Clamp t to be on the segment [0, 1]
+
+                     // Find the closest point on the line segment
+                     const closestX = x1 + t * (x2 - x1);
+                     const closestY = y1 + t * (y2 - y1);
+
+                     // Check distance from the point to this closest point on the segment
+                     const distSq = (canvasX - closestX)**2 + (canvasY - closestY)**2;
+                    if (distSq < tolerance * tolerance) { return i; } // Close enough
+                }
+            }
+             return -1; // No shape found nearby
+         }
+
+        // --- Pointer Event Handlers (Unified Mouse/Touch) ---
+        function handlePointerDown(event) {
+            if (!selectedLocation) return; // Ignore if no location selected
+            const pos = getPointerPos(event);
+            currentPointerPos = pos;
+            interactionStartPos = pos; // Record start position
+            hideItemInteractionPopup(); // Close popup on new interaction
+
+             const itemIndex = getHoveredItemIndex(pos.canvasX, pos.canvasY);
+             const shapeIndex = getHoveredShapeIndex(pos.canvasX, pos.canvasY);
+
+             // Prevent default actions like text selection or page scroll during canvas interaction
+             if (event.target === canvas) event.preventDefault();
+
+            if (currentTool === 'select') {
+                if (itemIndex !== -1) { // Clicked/tapped on an existing item
+                    // Initiate drag interaction
+                    activeInteraction = { type: 'drag', itemIndex: itemIndex, offsetX: pos.canvasX - locations[selectedLocation].items[itemIndex].x, offsetY: pos.canvasY - locations[selectedLocation].items[itemIndex].y };
+                    canvas.style.cursor = 'grabbing'; // Change cursor to indicate dragging
+                } else if (activeInteraction?.type === 'inlineInput' && !inlineInputWrapper.contains(event.target)) {
+                     // If inline input is open and clicked outside it, commit/close it
+                    commitInlineInput();
+                 } else if (!inlineInputWrapper.contains(event.target)) {
+                     // Clicked on empty space or a shape - prepare for potential 'tap' on pointer up
+                    activeInteraction = { type: 'selectTap', targetType: (shapeIndex !== -1 ? 'shape' : 'none'), index: shapeIndex };
+                 }
+                 // Note: Inline input isn't shown on pointer down, only on pointer up after confirming it was a tap
+             } else if (currentTool === 'drawRect' || currentTool === 'drawLine') {
+                // Start drawing interaction
+                activeInteraction = { type: 'draw', shape: currentTool.substring(4).toLowerCase(), startX: pos.canvasX, startY: pos.canvasY };
+            }
+            drawCurrentLocation(); // Redraw reflects start of drag/draw/hover state
+        }
+
+        function handlePointerMove(event) {
+            if (!selectedLocation) return;
+            // Update current pointer position regardless of interaction state
+            const pos = getPointerPos(event);
+            currentPointerPos = pos;
+
+             // If currently interacting (dragging or drawing), prevent page scrolling on touch devices
+            if (activeInteraction && (activeInteraction.type === 'drag' || activeInteraction.type === 'draw')) {
+                 if (event.cancelable) event.preventDefault();
+             } else if (!activeInteraction) {
+                 // If not interacting, redraw might be needed for desktop hover effects
+                 if(!isTouchDevice()) drawCurrentLocation();
+                 return; // No active interaction, nothing more to do on move
+             }
+
+            // Handle movement based on active interaction type
+            if (activeInteraction.type === 'drag') {
+                 // Update item position based on drag
+                 locations[selectedLocation].items[activeInteraction.itemIndex].x = pos.canvasX - activeInteraction.offsetX;
+                 locations[selectedLocation].items[activeInteraction.itemIndex].y = pos.canvasY - activeInteraction.offsetY;
+            } else if (activeInteraction.type === 'selectTap') {
+                 // If pointer moves significantly during a potential tap, cancel the tap intention
+                 const dx = pos.canvasX - interactionStartPos.canvasX;
+                 const dy = pos.canvasY - interactionStartPos.canvasY;
+                 if (dx * dx + dy * dy > TAP_VS_DRAG_THRESHOLD_SQ) { // Check squared distance
+                     cancelActiveInteraction(); // Moved too far, cancel tap
+                }
+             }
+            // Drawing feedback is handled entirely by drawCurrentLocation using activeInteraction state
+
+             // Redraw canvas needed for drag and draw updates
+             if (activeInteraction?.type === 'drag' || activeInteraction?.type === 'draw') {
+                drawCurrentLocation();
+             }
+        }
+
+        function handlePointerUp(event) {
+            if (!selectedLocation) return;
+            const pos = getPointerPos(event); // Get final position
+            currentPointerPos = pos; // Update last known position
+
+            if (activeInteraction) { // Process the end of the interaction
+                const interactionType = activeInteraction.type;
+                 const startPos = interactionStartPos; // Use captured start position
+
+                // Finalize interaction based on its type
+                 if (interactionType === 'drag') {
+                     saveLocations(); // Save the final position of the dragged item
+                    canvas.style.cursor = 'default'; // Reset cursor
+                 } else if (interactionType === 'draw') {
+                     // Check if the drawn shape is large enough to be saved
+                     if (Math.abs(pos.canvasX - startPos.canvasX) > 3 || Math.abs(pos.canvasY - startPos.canvasY) > 3) {
+                        addShape(activeInteraction.shape, startPos.canvasX, startPos.canvasY, pos.canvasX, pos.canvasY);
+                    }
+                } else if (interactionType === 'selectTap') {
+                     // Determine if the interaction was a 'tap' (minimal movement)
+                     const dx = pos.canvasX - startPos.canvasX;
+                     const dy = pos.canvasY - startPos.canvasY;
+                     if (dx * dx + dy * dy < TAP_VS_DRAG_THRESHOLD_SQ) {
+                         // It was a tap! Determine what was tapped.
+                        const tappedItemIndex = getHoveredItemIndex(startPos.canvasX, startPos.canvasY);
+                         const tappedShapeIndex = getHoveredShapeIndex(startPos.canvasX, startPos.canvasY);
+
+                        if (tappedItemIndex !== -1) {
+                            // Tap on an item: Show interaction popup
+                            showItemInteractionPopup('item', tappedItemIndex, startPos.clientX, startPos.clientY);
+                         } else if (tappedShapeIndex !== -1) {
+                             // Tap on a shape: Show interaction popup
+                            showItemInteractionPopup('shape', tappedShapeIndex, startPos.clientX, startPos.clientY);
+                        } else {
+                             // Tap on empty space: Show inline input to add new item
+                             showInlineInput(startPos.canvasX, startPos.canvasY);
+                        }
+                         activeInteraction = null; // Interaction resolved (popup/input shown), clear state
+                         drawCurrentLocation(); // Redraw needed for potential highlight changes
+                         return; // Exit handler early, don't fall through to clear interaction below
+                    }
+                     // If significant movement occurred, it wasn't a tap, treat as cancelled
+                 }
+
+                 // Clear interaction state (unless a popup/input was just opened)
+                 if (activeInteraction?.type !== 'inlineInput') { // Added safeguard check here
+                     activeInteraction = null;
+                    drawCurrentLocation(); // Redraw to clean up any temporary visuals
+                 }
+            }
+             // Ensure cursor is reset if interaction somehow ended unexpectedly
+            if(activeInteraction === null) {
+                 canvas.style.cursor = (currentTool === 'select') ? 'default' : 'crosshair';
+             }
+         }
+
+        // Handle cases where pointer leaves the canvas area
+         function handlePointerLeave() {
+             hideTooltip(); // Hide desktop tooltip when mouse leaves
+            if (activeInteraction?.type === 'drag') {
+                saveLocations(); // If dragging, save the state as it is when leaving
+            }
+             // Optionally cancel drawing, or allow completion? Cancelling is safer.
+            if (activeInteraction?.type === 'draw') { console.log("Drawing canceled: pointer left canvas."); }
+             cancelActiveInteraction(); // Cancel any interaction when pointer leaves
+         }
+
+        // --- Other Event Listeners Setup ---
+        function setupCommonListeners() {
+            // Add New Location
+            addLocationBtn.addEventListener('click', () => {
+                addLocation(newLocationNameInput.value.trim());
+            });
+            newLocationNameInput.addEventListener('keypress', (e) => {
+                 if(e.key === 'Enter') addLocationBtn.click(); // Allow Enter key to add location
+             });
+
+             // Clear Map Button
+            clearMapBtn.addEventListener('click', () => {
+                if (selectedLocation && locations[selectedLocation]) {
+                    if (confirm(`Are you sure you want to clear ALL items and shapes from map "${selectedLocation}"? This cannot be undone.`)) {
+                        locations[selectedLocation].items = [];
+                        locations[selectedLocation].shapes = [];
+                         saveLocations();
+                         hideItemInteractionPopup(); hideInlineInput(); // Ensure popups are closed
+                         drawCurrentLocation(); // Redraw the cleared map
+                    }
+                 }
+            });
+
+             // Tool Selection Buttons
+            toolSelectBtn.addEventListener('click', () => switchTool('select'));
+            toolDrawRectBtn.addEventListener('click', () => switchTool('drawRect'));
+             toolDrawLineBtn.addEventListener('click', () => switchTool('drawLine'));
+
+             // Search Input Event
+             searchInput.addEventListener('input', handleSearch);
+
+             // Inline Input Field Event Listeners
+            inlineInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                     commitInlineInput();
+                    e.preventDefault(); // Prevent form submission if inside a form
+                 } else if (e.key === 'Escape') {
+                     hideInlineInput(); // Cancel on Escape key
+                     e.preventDefault();
+                }
+             });
+             // Basic blur handling (might need refinement for complex focus scenarios)
+             // inlineInput.addEventListener('blur', () => {
+                 // // Delay slightly to see if focus moved *within* the app intentionally
+                 // setTimeout(() => {
+                 //    // Check if the inline input itself still seems like the intended active interaction
+                 //    if (activeInteraction?.type === 'inlineInput' && document.activeElement !== inlineInput) {
+                 //        commitInlineInput(); // Or potentially just hideInlineInput() if auto-commit on blur isn't desired
+                 //    }
+                 // }, 150);
+            // }); // Simplified: Rely on commit via Enter or cancelling via Escape/click outside
+         }
+
+        // --- Search Functionality ---
+         function handleSearch() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            searchResultsDiv.innerHTML = ''; // Clear previous results
+
+            if (searchTerm.length < 2) {
+                searchResultsDiv.innerHTML = '<div style="padding: 5px 8px; color: var(--text-light);">Enter 2 or more characters to search.</div>';
+                 return; // Don't search for very short strings
+            }
+
+            let resultsFound = 0;
+             // Iterate through all locations and their items
+            for (const locName in locations) {
+                 locations[locName].items.forEach((item, index) => {
+                     // Check if the item's note includes the search term (case-insensitive)
+                    if (item.note.toLowerCase().includes(searchTerm)) {
+                        resultsFound++;
+                        const div = document.createElement('div'); // Create result element
+                         // Truncate long notes for display brevity
+                         const displayNote = item.note.length > 40 ? item.note.substring(0, 37) + '...' : item.note;
+                        div.textContent = `"${displayNote}" (in ${locName})`; // Describe result
+                        div.title = `Click to view ${locName} and highlight item: ${item.note}`; // Tooltip with full note
+
+                         // **CRITICAL:** Add click handler to jump to the location and highlight
+                         div.onclick = () => {
+                             selectLocation(locName); // Switch to the location
+                             // Set temporary highlight state for the found item
+                             temporaryHighlightItem = { locName: locName, index: index };
+                             drawCurrentLocation(); // Redraw immediately to show highlight
+
+                            // Also visually highlight the result item in the search list
+                            document.querySelectorAll('#searchResults div').forEach(el => el.classList.remove('highlight')); // Clear previous list highlight
+                            div.classList.add('highlight'); // Highlight this list item
+
+                             // Set a timeout to remove the temporary highlights after a short duration
+                             setTimeout(() => {
+                                temporaryHighlightItem = null; // Clear item highlight state
+                                 // Safely remove class from search result item if it still exists
+                                 if (document.body.contains(div)) {
+                                     div.classList.remove('highlight');
+                                 }
+                                // Redraw the canvas only if the user hasn't switched locations away
+                                 if(selectedLocation === locName) {
+                                     drawCurrentLocation();
+                                 }
+                            }, 1500); // Duration of highlight in milliseconds (1.5 seconds)
+                        };
+                         searchResultsDiv.appendChild(div); // Add the result to the list
+                    }
+                });
+            }
+
+             // Show message if no results were found
+            if(resultsFound === 0) {
+                 searchResultsDiv.innerHTML = '<div style="padding: 5px 8px; color: var(--text-light);">No results found.</div>';
+            }
+        }
+
+
+        // --- Global Event Listener Setup ---
+        function addEventListeners() {
+             // Use Pointer Events for unified input (recommended)
+             if (window.PointerEvent) {
+                canvas.addEventListener('pointerdown', handlePointerDown);
+                canvas.addEventListener('pointermove', handlePointerMove);
+                 // Use window for pointerup/leave to catch events outside canvas during interaction
+                 window.addEventListener('pointerup', handlePointerUp);
+                 canvas.addEventListener('pointerleave', handlePointerLeave); // Leave specific to canvas element
+                 // canvas.addEventListener('pointercancel', cancelActiveInteraction); // Handle unexpected interruption
+             } else { // Fallback for older browsers
+                canvas.addEventListener('mousedown', handlePointerDown);
+                canvas.addEventListener('mousemove', handlePointerMove);
+                window.addEventListener('mouseup', handlePointerUp);
+                canvas.addEventListener('mouseleave', handlePointerLeave);
+
+                canvas.addEventListener('touchstart', handlePointerDown, { passive: false }); // Non-passive needed for preventDefault
+                 canvas.addEventListener('touchmove', handlePointerMove, { passive: false });
+                 window.addEventListener('touchend', handlePointerUp);
+                 // canvas.addEventListener('touchcancel', cancelActiveInteraction);
+             }
+
+             // Click listener on the body to handle closing popups/inputs when clicking outside
+             document.body.addEventListener('click', (e) => {
+                 // Close Item Interaction Popup if clicking outside it and not directly on its trigger target again
+                 if (itemInteractionPopup.style.display !== 'none' && !itemInteractionPopup.contains(e.target)) {
+                      // Simple check: if click wasn't inside the popup, close it.
+                      // More complex check could see if click hit the original item again, but often simpler is better.
+                      hideItemInteractionPopup();
+                  }
+                  // Commit/Hide Inline Input if clicking outside its wrapper AND not the canvas itself (canvas click handles it)
+                 if (activeInteraction?.type === 'inlineInput' && !inlineInputWrapper.contains(e.target) && e.target !== canvas) {
+                      commitInlineInput();
+                 }
+             }, true); // Use capture phase to catch clicks early
+
+             // Redraw canvas and potentially update marker sizes on window resize
+             window.addEventListener('resize', () => { updateMarkerRadiusFromCSS(); drawCurrentLocation(); });
+
+             // Setup listeners for buttons, inputs, etc.
+             setupCommonListeners();
+        }
+
+        // Helper to check if the browser likely supports touch events
+        function isTouchDevice() {
+            return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        }
+
+        // --- Run Initialization ---
+        document.addEventListener('DOMContentLoaded', init); // Start the app once the page is loaded
+
+    </script>
+</body>
+</html>
