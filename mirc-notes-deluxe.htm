@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mIRC Notes Deluxe (Circa 1998)</title>
+    <style>
+        /* --- Base Styles --- */
+        :root {
+            --ui-font: "MS Sans Serif", Tahoma, Arial, sans-serif;
+            --notes-font: "Lucida Console", Monaco, monospace;
+            --notes-font-size: 11px;
+            --ui-font-size: 12px;
+        }
+
+        body {
+            background-color: #008080; /* Classic Windows Teal */
+            font-family: var(--ui-font);
+            font-size: var(--ui-font-size);
+            margin: 0;
+            padding: 10px;
+            overflow: hidden; /* Prevent body scrollbars */
+            color: #000000; /* Default black text */
+        }
+
+        /* --- Window --- */
+        .mirc-window {
+            background-color: #C0C0C0; /* Standard gray */
+            border-top: 2px solid #FFFFFF;
+            border-left: 2px solid #FFFFFF;
+            border-right: 2px solid #404040; /* Darker gray for depth */
+            border-bottom: 2px solid #404040; /* Darker gray for depth */
+            box-shadow: 1px 1px 0px #808080, 2px 2px 0px #808080; /* Subtle double shadow */
+            padding: 2px;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 24px); /* Adjusted for body padding */
+            width: calc(100vw - 24px); /* Adjusted for body padding */
+            max-width: 1000px; /* Increased max width */
+            max-height: 800px; /* Added max height */
+            min-height: 400px;
+            min-width: 500px;
+            margin: auto; /* Center window */
+            box-sizing: border-box;
+            overflow: hidden; /* Ensure window itself doesn't scroll */
+        }
+
+        .title-bar {
+            background-color: #000080; /* Dark blue */
+            color: #FFFFFF; /* White */
+            font-weight: bold;
+            padding: 3px 5px;
+            cursor: default;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-shrink: 0; /* Prevent shrinking */
+            position: relative; /* For positioning buttons */
+        }
+
+        .title-bar-buttons {
+            position: absolute;
+            right: 3px;
+            top: 2px;
+            display: flex;
+            gap: 2px;
+        }
+
+        .title-bar-button {
+            background-color: #C0C0C0;
+            border-top: 1px solid #FFFFFF;
+            border-left: 1px solid #FFFFFF;
+            border-right: 1px solid #404040;
+            border-bottom: 1px solid #404040;
+            font-family: "System", sans-serif; /* Or Marlett for real icons */
+            font-size: 10px;
+            width: 16px;
+            height: 14px;
+            line-height: 14px;
+            text-align: center;
+            padding: 0;
+            cursor: default; /* Non-functional for now */
+        }
+
+        /* --- Tabs --- */
+        .tab-bar {
+            background-color: #C0C0C0;
+            padding: 3px 3px 0 3px;
+            border-bottom: 1px solid #808080;
+            display: flex;
+            flex-wrap: wrap; /* Allow tabs to wrap */
+            gap: 2px;
+            flex-shrink: 0; /* Prevent shrinking */
+            min-height: 22px; /* Ensure space even if empty */
+        }
+
+        .tab {
+            background-color: #C0C0C0;
+            border-top: 2px solid #FFFFFF;
+            border-left: 2px solid #FFFFFF;
+            border-right: 2px solid #808080;
+            padding: 3px 8px;
+            cursor: pointer;
+            position: relative; /* For close button */
+            max-width: 150px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .tab.active {
+            background-color: #C0C0C0; /* Same bg */
+            border-bottom: 2px solid #C0C0C0; /* Connects to content */
+            position: relative;
+            z-index: 1; /* Bring active tab border above content border */
+            font-weight: bold;
+        }
+
+        .tab:not(.active):hover {
+             background-color: #d4d4d4; /* Slight hover effect */
+        }
+
+         .tab .close-tab {
+            font-family: sans-serif;
+            font-weight: bold;
+            color: #404040;
+            margin-left: 6px;
+            padding: 0 2px;
+            font-size: 10px;
+            line-height: 1;
+            cursor: pointer;
+            border-radius: 2px;
+            display: none; /* Hidden by default */
+            vertical-align: middle;
+        }
+         .tab:hover .close-tab {
+             display: inline-block; /* Show on tab hover */
+         }
+         .tab.active .close-tab { /* Always show on active tab */
+             display: inline-block;
+         }
+         .tab .close-tab:hover {
+             background-color: #A0A0A0;
+             color: white;
+         }
+
+        #addTabButton {
+            background-color: #C0C0C0;
+            border: 1px solid #C0C0C0;
+            padding: 2px 5px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 5px; /* Space from last tab */
+        }
+        #addTabButton:hover {
+            border-color: #808080;
+        }
+
+        /* --- Main Content Area --- */
+        .main-content-wrapper {
+            flex-grow: 1; /* Take remaining vertical space */
+            background-color: #C0C0C0;
+            border-top: 1px solid #808080; /* Separator from tabs */
+            margin: -1px 0 0 0; /* Overlap border with tabs */
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Prevent content spillover */
+            position: relative; /* Needed for z-index */
+            z-index: 0;
+        }
+
+        .notes-display {
+            flex-grow: 1; /* Take most space */
+            background-color: #FFFFFF; /* White background for text area */
+            border: 1px solid #808080; /* Inner border */
+            border-right-color: #FFFFFF; /* Inset look */
+            border-bottom-color: #FFFFFF; /* Inset look */
+            padding: 5px;
+            overflow-y: scroll; /* Enable scrolling */
+            margin-bottom: 5px;
+            font-family: var(--notes-font);
+            font-size: var(--notes-font-size);
+            line-height: 1.3;
+            white-space: pre-wrap; /* Preserve whitespace and wrap lines */
+            word-wrap: break-word; /* Break long words */
+            position: relative; /* For context menu */
+        }
+
+        .notes-display .note-line {
+            margin-bottom: 2px;
+            position: relative; /* For hover effect & delete btn */
+            padding-right: 20px; /* Space for delete button */
+            cursor: default; /* Default cursor */
+            border-radius: 2px; /* Subtle rounding */
+        }
+         .notes-display .note-line:hover {
+             background-color: #f0f0f0; /* Slight hover */
+         }
+
+
+        .notes-display .timestamp {
+            color: #000080; /* Dark blue for timestamp */
+            margin-right: 5px;
+            font-weight: bold;
+            user-select: none; /* Don't select timestamp easily */
+        }
+
+        .notes-display .note-text {
+            /* Span to wrap actual text for easier editing/selection */
+            cursor: text; /* Text cursor over text */
+        }
+
+        .note-line .delete-note {
+            position: absolute;
+            right: 3px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-family: sans-serif;
+            font-weight: bold;
+            color: #cc0000;
+            cursor: pointer;
+            padding: 0 3px;
+            border-radius: 3px;
+            display: none; /* Hidden by default */
+            font-size: 10px;
+            line-height: 1;
+             user-select: none;
+        }
+         .note-line:hover .delete-note {
+             display: inline-block; /* Show on line hover */
+         }
+         .note-line .delete-note:hover {
+             background-color: #ffdddd;
+         }
+
+         /* Editing State */
+        .note-line .edit-input {
+             font-family: var(--notes-font);
+             font-size: var(--notes-font-size);
+             border: 1px solid #808080;
+             padding: 1px 3px;
+             width: calc(100% - 10px); /* Adjust width as needed */
+             box-sizing: border-box;
+             line-height: 1.3;
+        }
+
+        .input-area {
+            display: flex;
+            align-items: stretch; /* Make items same height */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        #noteInput {
+            flex-grow: 1;
+            border: 1px solid #808080;
+            border-right-color: #FFFFFF;
+            border-bottom-color: #FFFFFF;
+            padding: 4px;
+            font-family: var(--ui-font);
+            font-size: var(--ui-font-size);
+            margin-right: 5px;
+            resize: none; /* Disable textarea resizing handle */
+        }
+
+        /* --- Buttons --- */
+        .button-row {
+            display: flex;
+            gap: 5px; /* Space between buttons */
+            flex-shrink: 0;
+        }
+
+        button {
+            background-color: #C0C0C0;
+            border-top: 2px solid #FFFFFF;
+            border-left: 2px solid #FFFFFF;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+            padding: 5px 10px;
+            font-family: var(--ui-font);
+            font-size: var(--ui-font-size);
+            cursor: pointer;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        button:active {
+            border-top: 2px solid #808080;
+            border-left: 2px solid #808080;
+            border-right: 2px solid #FFFFFF;
+            border-bottom: 2px solid #FFFFFF;
+            padding: 6px 9px 4px 11px; /* Simulate press */
+            background-color: #B0B0B0; /* Slightly darker when pressed */
+        }
+
+        button:focus {
+            outline: 1px dotted #000000; /* Simple focus indicator */
+            outline-offset: -3px;
+        }
+
+        /* --- Status Bar --- */
+        .status-bar {
+            background-color: #C0C0C0;
+            padding: 2px 5px;
+            border-top: 1px solid #808080;
+            border-bottom: 1px solid #FFFFFF; /* Subtle bottom highlight */
+            font-size: 11px;
+            color: #000000;
+            min-height: 18px; /* Ensure it has some height */
+            line-height: 14px; /* Center text vertically */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        /* --- Settings Modal --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.3); /* Dim background */
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+             background-color: #C0C0C0;
+             border-top: 2px solid #FFFFFF;
+             border-left: 2px solid #FFFFFF;
+             border-right: 2px solid #808080;
+             border-bottom: 2px solid #808080;
+             padding: 15px;
+             box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+             min-width: 300px;
+        }
+        .modal-content h3 {
+            margin-top: 0;
+            font-size: var(--ui-font-size);
+            border-bottom: 1px solid #808080;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+        }
+        .modal-content label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .modal-content select, .modal-content input {
+            width: 100%;
+            padding: 3px;
+            margin-bottom: 10px;
+            font-family: var(--ui-font);
+            font-size: var(--ui-font-size);
+            border: 1px solid #808080;
+            border-right-color: #FFFFFF;
+            border-bottom-color: #FFFFFF;
+            box-sizing: border-box;
+        }
+        .modal-buttons {
+            text-align: right;
+            margin-top: 15px;
+        }
+         .modal-buttons button {
+             margin-left: 5px;
+             min-width: 80px;
+         }
+
+
+        /* --- Scrollbar styling (best effort) --- */
+        ::-webkit-scrollbar { width: 16px; height: 16px; }
+        ::-webkit-scrollbar-track { background: #dfdfdf; border-left: 1px solid #808080; }
+        ::-webkit-scrollbar-thumb { background: #C0C0C0; border: 1px solid; border-color: #FFFFFF #808080 #808080 #FFFFFF; min-height: 20px; }
+        ::-webkit-scrollbar-button { background: #C0C0C0; border: 1px solid; border-color: #FFFFFF #808080 #808080 #FFFFFF; height: 16px; width: 16px; display: block; }
+        /* Basic scrollbar styling for Firefox */
+        * { scrollbar-width: thin; scrollbar-color: #C0C0C0 #dfdfdf; }
+
+        /* --- Mobile concessions (Minimal - breaks the aesthetic otherwise) --- */
+        @media (max-width: 600px) {
+            body { padding: 5px; font-size: 14px; } /* Slightly larger base font */
+            .mirc-window { width: calc(100vw - 10px); height: calc(100vh - 10px); min-width: 95%; max-width: 98%; max-height: 98%; padding: 1px; }
+            .title-bar { padding: 2px 4px; }
+            .title-bar-buttons { right: 2px; top: 1px;}
+            .title-bar-button { width: 15px; height: 13px; line-height: 13px; }
+            .tab { padding: 3px 6px; }
+            .main-content-wrapper { padding: 3px; }
+            .notes-display { padding: 3px; font-size: 13px; } /* Slightly larger notes font */
+            #noteInput { padding: 3px; font-size: 14px; }
+            button { padding: 4px 8px; min-width: 60px; font-size: 14px; }
+            .button-row { flex-wrap: wrap; } /* Allow buttons to wrap */
+            .status-bar { padding: 1px 4px; min-height: 16px; line-height: 14px; }
+            :root { --notes-font-size: 13px; --ui-font-size: 14px; }
+            .note-line .delete-note { font-size: 12px; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="mirc-window">
+        <div class="title-bar" id="titleBar">
+            mIRC Notes Deluxe - Status
+            <div class="title-bar-buttons">
+                <div class="title-bar-button">_</div><!-- Minimize -->
+                <div class="title-bar-button">□</div><!-- Maximize -->
+                <div class="title-bar-button">X</div><!-- Close -->
+            </div>
+        </div>
+        <div class="tab-bar" id="tabBar">
+            <!-- Tabs will be loaded here -->
+            <button id="addTabButton" title="Add New Tab">+</button>
+        </div>
+        <div class="main-content-wrapper">
+            <div class="notes-display" id="notesDisplay">
+                <!-- Notes for the active tab will be loaded/added here -->
+            </div>
+            <div class="input-area">
+                <textarea id="noteInput" rows="2" placeholder="Enter your note here... Press Enter to add."></textarea>
+                <div class="button-row">
+                    <button id="addNoteButton">Add</button>
+                    <button id="copyTextButton" title="Copy notes text (no timestamps)">Copy</button>
+                    <button id="exportButton" title="Export notes as TXT file">Export</button>
+                    <button id="settingsButton" title="Settings">...</button>
+                     <button id="clearNotesButton" title="Clear notes in current tab">Clear</button>
+                </div>
+            </div>
+        </div>
+        <div class="status-bar" id="statusBar">
+            Ready. Notes are saved locally in your browser. Mobile support is limited.
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Settings</h3>
+            <label for="uiFontSelect">UI Font:</label>
+            <select id="uiFontSelect">
+                <option value='"MS Sans Serif", Tahoma, Arial, sans-serif'>MS Sans Serif (Default)</option>
+                <option value='Tahoma, Arial, sans-serif'>Tahoma</option>
+                <option value='Arial, sans-serif'>Arial</option>
+                <option value='Verdana, sans-serif'>Verdana</option>
+                <option value='"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'>Segoe UI (Modern)</option>
+            </select>
+
+            <label for="notesFontSelect">Notes Font:</label>
+            <select id="notesFontSelect">
+                <option value='"Lucida Console", Monaco, monospace'>Lucida Console (Default)</option>
+                <option value='"Courier New", Courier, monospace'>Courier New</option>
+                <option value='Consolas, Monaco, monospace'>Consolas</option>
+                <option value='monospace'>Generic Monospace</option>
+            </select>
+
+             <label for="notesFontSizeInput">Notes Font Size (px):</label>
+             <input type="number" id="notesFontSizeInput" min="8" max="24" step="1">
+
+
+            <div class="modal-buttons">
+                <button id="saveSettingsButton">Apply</button>
+                <button id="cancelSettingsButton">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Elements ---
+            const notesDisplay = document.getElementById('notesDisplay');
+            const noteInput = document.getElementById('noteInput');
+            const addNoteButton = document.getElementById('addNoteButton');
+            const clearNotesButton = document.getElementById('clearNotesButton');
+            const exportButton = document.getElementById('exportButton');
+            const copyTextButton = document.getElementById('copyTextButton');
+            const settingsButton = document.getElementById('settingsButton');
+            const statusBar = document.getElementById('statusBar');
+            const titleBar = document.getElementById('titleBar');
+            const tabBar = document.getElementById('tabBar');
+            const addTabButton = document.getElementById('addTabButton');
+            const settingsModal = document.getElementById('settingsModal');
+            const saveSettingsButton = document.getElementById('saveSettingsButton');
+            const cancelSettingsButton = document.getElementById('cancelSettingsButton');
+            const uiFontSelect = document.getElementById('uiFontSelect');
+            const notesFontSelect = document.getElementById('notesFontSelect');
+            const notesFontSizeInput = document.getElementById('notesFontSizeInput');
+            const root = document.documentElement; // For CSS variables
+
+            // --- State & Constants ---
+            const STORAGE_KEY_NOTES = 'mircNotesDeluxeData';
+            const STORAGE_KEY_SETTINGS = 'mircNotesDeluxeSettings';
+            const DEFAULT_TAB_NAME = '#notes';
+            let notesData = {}; // Object to hold notes for all tabs { tabName: [{ts, text}, ...], ... }
+            let appSettings = {}; // Object for settings { uiFont, notesFont, notesFontSize }
+            let activeTabName = DEFAULT_TAB_NAME;
+            let editingNoteElement = null; // Track which note is being edited
+
+            // --- Utility Functions ---
+            const getCurrentTimestamp = () => {
+                const now = new Date();
+                const h = String(now.getHours()).padStart(2, '0');
+                const m = String(now.getMinutes()).padStart(2, '0');
+                const s = String(now.getSeconds()).padStart(2, '0');
+                return `[${h}:${m}:${s}]`;
+            };
+
+            const updateStatus = (message) => {
+                statusBar.textContent = message;
+                statusBar.title = message; // Tooltip for long messages
+            };
+
+            const updateTitle = () => {
+                 const noteCount = notesData[activeTabName]?.length || 0;
+                 titleBar.firstChild.textContent = `mIRC Notes Deluxe - Status [${activeTabName}] (${noteCount} lines) `;
+            };
+
+            const scrollToBottom = () => {
+                notesDisplay.scrollTop = notesDisplay.scrollHeight;
+            };
+
+            const sanitizeTabName = (name) => {
+                // Basic sanitization: remove problematic chars, ensure starts with # or is default
+                let cleanName = name.trim().replace(/[^a-zA-Z0-9_#\-]/g, '_');
+                if (!cleanName) return null; // Prevent empty names
+                if (!cleanName.startsWith('#')) {
+                     // Allow non-# names, but ensure it's not just whitespace or empty
+                     if (!/^[a-zA-Z0-9_]/.test(cleanName)) {
+                         cleanName = 'channel_' + cleanName; // Prefix if starts weirdly
+                     }
+                }
+                if (cleanName.length > 50) cleanName = cleanName.substring(0, 50); // Limit length
+                return cleanName;
+            };
+
+             const escapeHtml = (unsafe) => {
+                if (typeof unsafe !== 'string') return unsafe;
+                return unsafe
+                    .replace(/&/g, "&")
+                    .replace(/</g, "<")
+                    .replace(/>/g, ">")
+                    .replace(/"/g, "\"")
+                    .replace(/'/g, "'")
+            };
+
+
+            // --- Settings Functions ---
+            const loadSettings = () => {
+                const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
+                 const defaultSettings = {
+                    uiFont: '"MS Sans Serif", Tahoma, Arial, sans-serif',
+                    notesFont: '"Lucida Console", Monaco, monospace',
+                    notesFontSize: '11'
+                 };
+                appSettings = savedSettings ? { ...defaultSettings, ...JSON.parse(savedSettings) } : { ...defaultSettings }; // Merge with defaults
+                applySettings();
+            };
+
+            const saveSettings = () => {
+                localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(appSettings));
+                 applySettings();
+                updateStatus("Settings saved.");
+            };
+
+            const applySettings = () => {
+                 root.style.setProperty('--ui-font', appSettings.uiFont);
+                 root.style.setProperty('--notes-font', appSettings.notesFont);
+                 root.style.setProperty('--notes-font-size', `${appSettings.notesFontSize}px`);
+
+                 // Update selects in modal to reflect current settings
+                 uiFontSelect.value = appSettings.uiFont;
+                 notesFontSelect.value = appSettings.notesFont;
+                 notesFontSizeInput.value = appSettings.notesFontSize;
+            };
+
+
+            const openSettingsModal = () => {
+                // Load current settings into modal inputs before showing
+                 uiFontSelect.value = appSettings.uiFont;
+                 notesFontSelect.value = appSettings.notesFont;
+                 notesFontSizeInput.value = appSettings.notesFontSize;
+                 settingsModal.style.display = 'flex';
+            };
+
+             const closeSettingsModal = () => {
+                 settingsModal.style.display = 'none';
+             };
+
+
+            // --- Note Data Functions ---
+            const loadNotesData = () => {
+                const savedNotes = localStorage.getItem(STORAGE_KEY_NOTES);
+                if (savedNotes) {
+                    try {
+                        notesData = JSON.parse(savedNotes);
+                        // Ensure default tab exists if data loaded but is empty or corrupt
+                        if (typeof notesData !== 'object' || notesData === null) notesData = {};
+                        if (!notesData[DEFAULT_TAB_NAME]) {
+                             notesData[DEFAULT_TAB_NAME] = [];
+                        }
+                    } catch (e) {
+                        console.error("Error parsing saved notes:", e);
+                        notesData = { [DEFAULT_TAB_NAME]: [] }; // Start fresh with default tab
+                        updateStatus("Error loading notes. Starting fresh.");
+                        localStorage.removeItem(STORAGE_KEY_NOTES);
+                    }
+                } else {
+                    notesData = { [DEFAULT_TAB_NAME]: [] }; // Initialize with default tab
+                    updateStatus("No saved notes found. Welcome!");
+                     // Add initial welcome message to default tab only on first ever load
+                     notesData[DEFAULT_TAB_NAME].push({ ts: getCurrentTimestamp(), text: "*** Welcome to mIRC Notes! Notes are saved automatically per tab." });
+                     saveNotesData(); // Save the initial state
+                }
+                // Determine initial active tab (last known or default)
+                activeTabName = localStorage.getItem('mircNotesActiveTab') || DEFAULT_TAB_NAME;
+                 if (!notesData[activeTabName]) { // If saved active tab doesn't exist anymore
+                     activeTabName = Object.keys(notesData)[0] || DEFAULT_TAB_NAME; // Fallback to first available or default
+                 }
+                 localStorage.setItem('mircNotesActiveTab', activeTabName);
+            };
+
+            const saveNotesData = () => {
+                try {
+                    localStorage.setItem(STORAGE_KEY_NOTES, JSON.stringify(notesData));
+                    const noteCount = notesData[activeTabName]?.length || 0;
+                    updateStatus(`Notes saved for ${activeTabName} (${noteCount} lines).`);
+                    updateTitle();
+                } catch (e) {
+                    console.error("Error saving notes:", e);
+                    updateStatus("Error saving notes! Storage might be full.");
+                     // Could implement more robust error handling / user notification here
+                     if (e.name === 'QuotaExceededError') {
+                         alert("Could not save notes. Your browser's local storage is likely full. Please clear some space or export your notes.");
+                     }
+                }
+            };
+
+             // --- Tab Functions ---
+            const renderTabs = () => {
+                // Clear existing tabs except the add button
+                 while (tabBar.firstChild && tabBar.firstChild !== addTabButton) {
+                     tabBar.removeChild(tabBar.firstChild);
+                 }
+
+                 Object.keys(notesData).sort().forEach(tabName => {
+                     const tab = document.createElement('div');
+                     tab.className = 'tab';
+                     tab.textContent = tabName;
+                     tab.dataset.tabName = tabName;
+                     tab.title = tabName; // Tooltip for long names
+
+                     const closeBtn = document.createElement('span');
+                     closeBtn.className = 'close-tab';
+                     closeBtn.innerHTML = '×'; // Use HTML entity for 'x'
+                     closeBtn.title = `Close tab ${tabName}`;
+                     closeBtn.onclick = (e) => {
+                         e.stopPropagation(); // Prevent tab switch
+                         deleteTab(tabName);
+                     };
+                     tab.appendChild(closeBtn);
+
+
+                     if (tabName === activeTabName) {
+                         tab.classList.add('active');
+                     }
+                     tab.addEventListener('click', () => switchTab(tabName));
+                     tabBar.insertBefore(tab, addTabButton); // Insert tab before the '+' button
+                 });
+            };
+
+            const switchTab = (tabName) => {
+                if (tabName === activeTabName || !notesData[tabName]) return; // No change or tab doesn't exist
+
+                // Abort any ongoing edit before switching
+                if (editingNoteElement) {
+                     cancelEditNote();
+                }
+
+                activeTabName = tabName;
+                 localStorage.setItem('mircNotesActiveTab', activeTabName);
+                renderTabs(); // Update active state visually
+                displayNotesForActiveTab();
+                updateTitle();
+                 noteInput.focus();
+                updateStatus(`Switched to tab: ${activeTabName}`);
+            };
+
+            const addTab = () => {
+                let newTabName = prompt("Enter new tab name (e.g., #ideas, projectX):", "#new_tab");
+                if (!newTabName) return; // User cancelled
+
+                newTabName = sanitizeTabName(newTabName);
+
+                 if (!newTabName) {
+                     alert("Invalid tab name.");
+                     return;
+                 }
+
+                if (notesData[newTabName]) {
+                    alert(`Tab "${newTabName}" already exists.`);
+                     switchTab(newTabName); // Switch to it if it exists
+                } else {
+                    notesData[newTabName] = []; // Create new empty notes array
+                    saveNotesData();
+                    renderTabs();
+                    switchTab(newTabName); // Switch to the new tab
+                    updateStatus(`Created and switched to tab: ${newTabName}`);
+                }
+            };
+
+            const deleteTab = (tabName) => {
+                 if (Object.keys(notesData).length <= 1) {
+                     alert("Cannot delete the last tab.");
+                     return;
+                 }
+
+                if (confirm(`Are you sure you want to delete the tab "${tabName}" and all its notes? This cannot be undone.`)) {
+                    delete notesData[tabName];
+
+                     // If deleting the active tab, switch to another one
+                     if (activeTabName === tabName) {
+                         activeTabName = Object.keys(notesData)[0]; // Switch to the first remaining tab
+                          localStorage.setItem('mircNotesActiveTab', activeTabName);
+                     }
+
+                    saveNotesData();
+                    renderTabs();
+                    displayNotesForActiveTab(); // Display notes of the new active tab
+                    updateStatus(`Deleted tab: ${tabName}`);
+                }
+            };
+
+
+            // --- Note Display and Interaction Functions ---
+            const displayNotesForActiveTab = () => {
+                notesDisplay.innerHTML = ''; // Clear previous display
+                const notes = notesData[activeTabName] || [];
+                if (notes.length === 0) {
+                     // Optional: Display a message if the tab is empty
+                     const emptyMsg = document.createElement('div');
+                     emptyMsg.style.color = '#808080';
+                     emptyMsg.style.textAlign = 'center';
+                     emptyMsg.style.padding = '20px';
+                     emptyMsg.textContent = 'This tab is empty. Add some notes!';
+                     notesDisplay.appendChild(emptyMsg);
+                } else {
+                    notes.forEach((note, index) => displayNoteLine(note.ts, note.text, index));
+                }
+                 updateTitle();
+                 scrollToBottom();
+            };
+
+            const displayNoteLine = (timestamp, text, index) => {
+                const noteLine = document.createElement('div');
+                noteLine.classList.add('note-line');
+                noteLine.dataset.index = index; // Store the index for editing/deleting
+
+                const timeSpan = document.createElement('span');
+                timeSpan.classList.add('timestamp');
+                timeSpan.textContent = timestamp;
+
+                const textSpan = document.createElement('span');
+                textSpan.classList.add('note-text');
+                textSpan.textContent = ' ' + text; // Add space after timestamp
+
+                 // Delete button (hidden via CSS)
+                const deleteBtn = document.createElement('span');
+                 deleteBtn.classList.add('delete-note');
+                 deleteBtn.innerHTML = '×'; // 'x' symbol
+                 deleteBtn.title = 'Delete this note';
+                 deleteBtn.onclick = (e) => {
+                     e.stopPropagation(); // Prevent triggering edit
+                     deleteNote(index);
+                 };
+
+                noteLine.appendChild(timeSpan);
+                noteLine.appendChild(textSpan);
+                noteLine.appendChild(deleteBtn);
+
+                 // Double-click to edit
+                 noteLine.addEventListener('dblclick', () => startEditNote(noteLine, index));
+
+                notesDisplay.appendChild(noteLine);
+            };
+
+            // --- Add, Edit, Delete Note Functions ---
+            const addNote = () => {
+                const text = noteInput.value.trim();
+                if (text) {
+                    const timestamp = getCurrentTimestamp();
+                    const newNote = { ts: timestamp, text: text };
+
+                     if (!notesData[activeTabName]) { // Ensure array exists if tab was just created empty
+                         notesData[activeTabName] = [];
+                     }
+
+                    // If the display was showing the 'empty' message, clear it first
+                    if (notesData[activeTabName].length === 0) {
+                        notesDisplay.innerHTML = '';
+                    }
+
+                     notesData[activeTabName].push(newNote);
+                     const newIndex = notesData[activeTabName].length - 1;
+                     displayNoteLine(timestamp, text, newIndex); // Add to display
+
+                    noteInput.value = ''; // Clear input
+                    scrollToBottom();
+                    saveNotesData(); // Save after adding
+                }
+                noteInput.focus(); // Keep focus on input
+            };
+
+            const deleteNote = (index) => {
+                 if (!notesData[activeTabName] || index < 0 || index >= notesData[activeTabName].length) return;
+
+                 // Optional: Confirmation for delete
+                 // if (!confirm("Delete this note?")) return;
+
+                 notesData[activeTabName].splice(index, 1); // Remove from data array
+                 saveNotesData();
+                 displayNotesForActiveTab(); // Redraw notes for the current tab
+                 updateStatus(`Note deleted from ${activeTabName}.`);
+            };
+
+            const startEditNote = (noteLineElement, index) => {
+                if (editingNoteElement || !notesData[activeTabName] || index < 0 || index >= notesData[activeTabName].length) return; // Don't start edit if already editing or invalid index
+
+                editingNoteElement = noteLineElement; // Track the element being edited
+                 const note = notesData[activeTabName][index];
+                const textSpan = noteLineElement.querySelector('.note-text');
+                const timestampSpan = noteLineElement.querySelector('.timestamp');
+                 const deleteButton = noteLineElement.querySelector('.delete-note');
+
+                 if (!textSpan || !timestampSpan) return; // Element structure issue
+
+                 // Hide original text and delete button
+                 textSpan.style.display = 'none';
+                 if(deleteButton) deleteButton.style.display = 'none';
+
+
+                 // Create input field
+                const input = document.createElement('textarea'); // Use textarea for potential multiline edits
+                 input.classList.add('edit-input');
+                 input.value = note.text;
+                 input.rows = Math.max(1, Math.min(5, (note.text.match(/\n/g) || []).length + 1)); // Basic auto-row adjust
+
+                 input.onkeydown = (e) => {
+                     if (e.key === 'Enter' && !e.shiftKey) {
+                         e.preventDefault();
+                         finishEditNote(input.value, index);
+                     } else if (e.key === 'Escape') {
+                         e.preventDefault();
+                         cancelEditNote();
+                     }
+                 };
+                 input.onblur = () => {
+                      // Use a tiny timeout to allow Enter keydown to process first
+                      setTimeout(() => {
+                          if (editingNoteElement === noteLineElement) { // Check if edit wasn't finished by Enter
+                             finishEditNote(input.value, index); // Save on blur
+                          }
+                      }, 100);
+                 };
+
+                 // Insert input after timestamp
+                 timestampSpan.after(input);
+                 input.focus();
+                 input.select();
+            };
+
+            const finishEditNote = (newText, index) => {
+                 if (!editingNoteElement || !notesData[activeTabName] || index < 0 || index >= notesData[activeTabName].length) return;
+
+                 const text = newText.trim(); // Trim whitespace from edit
+                 if (text) { // Only save if not empty
+                     notesData[activeTabName][index].text = text;
+                     // No need to update timestamp on edit
+                 } else {
+                     // If text is empty after edit, treat it as delete
+                     notesData[activeTabName].splice(index, 1);
+                 }
+
+                 saveNotesData();
+                 editingNoteElement = null; // Clear editing state *before* redrawing
+                 displayNotesForActiveTab(); // Redraw notes for the current tab
+                 updateStatus(`Note updated in ${activeTabName}.`);
+            };
+
+            const cancelEditNote = () => {
+                 if (!editingNoteElement) return;
+
+                 const input = editingNoteElement.querySelector('.edit-input');
+                 const textSpan = editingNoteElement.querySelector('.note-text');
+                 const deleteButton = editingNoteElement.querySelector('.delete-note');
+
+
+                 if (input) input.remove();
+                 if (textSpan) textSpan.style.display = ''; // Show original text span
+                 if (deleteButton) deleteButton.style.display = ''; // Let CSS handle visibility
+
+                 editingNoteElement = null; // Clear editing state
+                 updateStatus("Edit cancelled.");
+            };
+
+            // --- Other Actions ---
+            const clearNotes = () => {
+                if (!notesData[activeTabName] || notesData[activeTabName].length === 0) {
+                    updateStatus(`Tab ${activeTabName} is already empty.`);
+                    return;
+                }
+                if (confirm(`Are you sure you want to clear all notes in the current tab "${activeTabName}"? This cannot be undone.`)) {
+                    notesData[activeTabName] = []; // Clear notes for the active tab
+                    displayNotesForActiveTab(); // Redraw (will show empty message)
+                    saveNotesData();
+                    updateStatus(`All notes cleared for tab: ${activeTabName}`);
+                    noteInput.focus();
+                }
+            };
+
+            const exportNotes = () => {
+                const notes = notesData[activeTabName] || [];
+                if (notes.length === 0) {
+                    alert(`Tab "${activeTabName}" is empty. Nothing to export.`);
+                    return;
+                }
+
+                 let fileContent = `Notes from mIRC Notes Deluxe - Tab: ${activeTabName}\n`;
+                 fileContent += `Exported on: ${new Date().toLocaleString()}\n`;
+                 fileContent += "--------------------------------------------------\n\n";
+
+                notes.forEach(note => {
+                    fileContent += `${note.ts} ${note.text}\n`;
+                });
+
+                const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                 const safeTabName = activeTabName.replace(/[^a-zA-Z0-9_]/g, '_'); // Sanitize for filename
+                link.download = `mirc_notes_${safeTabName}_${Date.now()}.txt`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                updateStatus(`Notes exported for tab: ${activeTabName}`);
+            };
+
+             const copyNotesTextOnly = () => {
+                const notes = notesData[activeTabName] || [];
+                 if (notes.length === 0) {
+                     updateStatus(`Tab "${activeTabName}" is empty. Nothing to copy.`);
+                     // Optionally use alert: alert(`Tab "${activeTabName}" is empty. Nothing to copy.`);
+                     return;
+                 }
+
+                 const textOnly = notes.map(note => note.text).join('\n');
+
+                 navigator.clipboard.writeText(textOnly)
+                     .then(() => {
+                         updateStatus(`Note text (without timestamps) for ${activeTabName} copied to clipboard.`);
+                     })
+                     .catch(err => {
+                         console.error('Failed to copy text: ', err);
+                         updateStatus('Failed to copy notes text.');
+                         // Fallback or alert might be needed for older browsers/permissions issues
+                         alert("Could not copy text automatically. Please check browser permissions or try manual selection.");
+                     });
+             };
+
+            // --- Event Listeners ---
+            addNoteButton.addEventListener('click', addNote);
+            clearNotesButton.addEventListener('click', clearNotes);
+            exportButton.addEventListener('click', exportNotes);
+            copyTextButton.addEventListener('click', copyNotesTextOnly);
+            settingsButton.addEventListener('click', openSettingsModal);
+            addTabButton.addEventListener('click', addTab);
+
+            noteInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    addNote();
+                }
+            });
+
+             // Settings Modal Listeners
+            saveSettingsButton.addEventListener('click', () => {
+                appSettings.uiFont = uiFontSelect.value;
+                appSettings.notesFont = notesFontSelect.value;
+                appSettings.notesFontSize = notesFontSizeInput.value || '11'; // Default if empty
+                saveSettings();
+                 closeSettingsModal();
+             });
+             cancelSettingsButton.addEventListener('click', closeSettingsModal);
+             settingsModal.addEventListener('click', (e) => { // Close if clicking overlay
+                 if (e.target === settingsModal) {
+                     closeSettingsModal();
+                 }
+             });
+
+
+            // --- Initialization ---
+            loadSettings(); // Load settings first to apply fonts immediately
+            loadNotesData();
+            renderTabs();
+            displayNotesForActiveTab(); // Display notes for the initially active tab
+            noteInput.focus();
+
+             // Add note about mobile limitations to status bar initially if relevant
+            if (window.innerWidth <= 600) {
+                 statusBar.textContent += " (Mobile view: Limited functionality/layout may occur)";
+            }
+        });
+    </script>
+
+</body>
+</html>
