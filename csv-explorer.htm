@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instant CSV Explorer (Debug v2)</title>
+    <!-- CDNs for CSV Parsing, Datatables, and Charting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/simple-datatables@latest/dist/style.css" rel="stylesheet" type="text/css">
+    <script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 15px; display: flex; flex-direction: column; height: 95vh; }
+        #controls { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #ccc;}
+        textarea { width: 98%; height: 150px; margin-bottom: 10px; font-family: monospace; }
+        .options { margin-bottom: 10px; }
+        #output { display: flex; flex-direction: row; gap: 20px; flex-grow: 1; overflow: hidden; border-top: 1px solid #ccc; padding-top: 10px;}
+        #tableContainer { flex: 1; overflow: auto; border: 1px solid #ccc; padding: 10px; }
+        #chartContainer { flex: 1; display: flex; flex-direction: column; gap: 15px; overflow: auto; border: 1px solid #ccc; padding: 10px; }
+        canvas { max-width: 100%; border: 1px dashed #eee; background-color: #fff; } /* Added background for visibility */
+        h3 { margin-top: 0; }
+        #status { margin-top: 5px; font-style: italic; color: #555; }
+        .error { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Instant CSV Explorer (Debug v2)</h1>
+    <p>Paste CSV data below. Open Developer Console (F12) to see logs/errors.</p>
+
+    <div id="controls">
+        <textarea id="csvInput" placeholder="Paste your CSV data here..."></textarea>
+        <div class="options">
+            <label><input type="checkbox" id="headerCheck" checked> First row is header</label>
+            <label>Delimiter: <input type="text" id="delimiterInput" value="," size="1"></label>
+            <button id="processBtn">Process Data</button>
+            <button id="clearBtn">Clear</button>
+        </div>
+        <div id="status">Status: Ready</div>
+    </div>
+
+    <div id="output">
+        <div id="tableContainer">
+            <h3>Interactive Table</h3>
+            <div id="tableWrapper">Table will appear here.</div>
+        </div>
+        <div id="chartContainer">
+            <h3>Suggested Charts</h3>
+             Chart suggestions will appear here.
+        </div>
+    </div>
+
+    <script>
+        const csvInput = document.getElementById('csvInput');
+        const headerCheck = document.getElementById('headerCheck');
+        const delimiterInput = document.getElementById('delimiterInput');
+        const processBtn = document.getElementById('processBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const tableWrapper = document.getElementById('tableWrapper');
+        const chartContainer = document.getElementById('chartContainer');
+        const statusDiv = document.getElementById('status');
+        let currentDataTable = null;
+        let currentCharts = [];
+
+        processBtn.addEventListener('click', processData);
+        clearBtn.addEventListener('click', clearAll);
+
+        function updateStatus(message, isError = false) {
+            console.log(`Status Update: ${message}`); // Log status
+            statusDiv.textContent = `Status: ${message}`;
+            statusDiv.className = isError ? 'error' : '';
+        }
+
+        function clearAll() {
+            updateStatus("Clearing...");
+            csvInput.value = '';
+            if (currentDataTable) {
+                try {
+                    currentDataTable.destroy();
+                } catch (e) {
+                    console.error("Error destroying datatable:", e);
+                }
+                currentDataTable = null;
+            }
+            tableWrapper.innerHTML = 'Table will appear here.'; // Reset placeholder
+
+            currentCharts.forEach(chart => {
+                try {
+                    chart.destroy();
+                } catch(e) {
+                    console.error("Error destroying chart:", e);
+                }
+            });
+            currentCharts = [];
+            chartContainer.innerHTML = '<h3>Suggested Charts</h3>Chart suggestions will appear here.'; // Reset placeholder
+            updateStatus("Cleared. Ready.");
+        }
+
+        function processData() {
+            // Destroy previous table/charts BEFORE reading new input
+            if (currentDataTable) {
+                try { currentDataTable.destroy(); } catch (e) { console.error("Error destroying datatable:", e); }
+                currentDataTable = null;
+            }
+            tableWrapper.innerHTML = 'Table will appear here.'; // Reset placeholder
+            currentCharts.forEach(chart => {
+                try { chart.destroy(); } catch(e) { console.error("Error destroying chart:", e); }
+            });
+            currentCharts = [];
+            chartContainer.innerHTML = '<h3>Suggested Charts</h3>Chart suggestions will appear here.'; // Reset placeholder
+
+            updateStatus("Processing Data...");
+
+            // *** ADDED LOGGING HERE ***
+            console.log("--- processData called ---");
+            const textareaElement = document.getElementById('csvInput'); // Get fresh reference just in case
+            if (!textareaElement) {
+                 console.error("Textarea element with ID 'csvInput' not found!");
+                 updateStatus("Error: Textarea element not found.", true);
+                 alert("Error: Could not find the text input area.");
+                 return;
+            }
+            const rawValue = textareaElement.value;
+            console.log("Raw Textarea Value Length:", rawValue.length);
+            console.log("Raw Textarea Value (first 500 chars):", rawValue.substring(0, 500)); // Log the beginning
+
+            const csvString = rawValue.trim();
+            console.log("Trimmed Value Length:", csvString.length);
+            // *** END ADDED LOGGING ***
+
+            if (!csvString) {
+                console.warn("Trimmed value is empty. Showing alert."); // Log why alert is shown
+                updateStatus("Error: Please paste some CSV data. Textarea seems empty.", true);
+                alert("Please paste some CSV data.");
+                return;
+            }
+
+            const delimiter = delimiterInput.value || ',';
+            const hasHeader = headerCheck.checked;
+
+            updateStatus(`Parsing CSV with delimiter "${delimiter}" and header=${hasHeader}...`);
+
+            try {
+                Papa.parse(csvString, {
+                    header: hasHeader,
+                    skipEmptyLines: true,
+                    delimiter: delimiter,
+                    dynamicTyping: true, // Important: Attempts to convert numbers/booleans
+                    complete: function(results) {
+                        console.log("PapaParse Complete Results:", results); // Log results
+
+                        if (results.errors.length) {
+                            console.error("Parsing Errors:", results.errors);
+                            updateStatus(`Parsing Errors: ${results.errors[0].message}`, true);
+                            alert("Errors during parsing: \n" + results.errors.map(e => e.message).join('\n'));
+                            return; // Stop processing if parsing failed
+                        }
+
+                        if (!results.data || results.data.length === 0) {
+                            updateStatus("Error: No data found after parsing.", true);
+                            alert("No data found after parsing.");
+                            return;
+                        }
+
+                        updateStatus("Parsing successful. Processing data...");
+                        // Make sure headers exist before proceeding
+                        const headers = hasHeader ? results.meta.fields : (results.data[0] ? Object.keys(results.data[0]) : []); // Safer header detection
+
+                        if (!headers || headers.length === 0) {
+                             updateStatus("Error: Could not determine headers.", true);
+                             alert("Could not determine headers from the data. Is the first row empty or the delimiter incorrect?");
+                             return;
+                        }
+                        const data = results.data;
+
+                        console.log("Headers:", headers);
+                        console.log("First row of data:", data[0]);
+
+                        // Wrap rendering in try/catch
+                        try {
+                            updateStatus("Rendering table...");
+                            renderTable(headers, data);
+                            updateStatus("Table rendered. Generating charts...");
+                            generateCharts(headers, data);
+                            updateStatus("Processing complete.");
+                        } catch (renderError) {
+                            console.error("Error during rendering:", renderError);
+                            updateStatus(`Error during rendering: ${renderError.message}`, true);
+                            alert(`An error occurred while trying to display the data: ${renderError.message}`);
+                        }
+                    },
+                    error: function(error) {
+                        console.error("PapaParse Failed:", error);
+                        updateStatus(`Parsing Failed: ${error.message}`, true);
+                        alert("Failed to parse CSV: " + error.message);
+                    }
+                });
+            } catch (e) {
+                 console.error("Critical Error during parsing setup:", e);
+                 updateStatus(`Critical Error: ${e.message}`, true);
+                 alert(`A critical error occurred: ${e.message}`);
+            }
+        }
+
+        function renderTable(headers, data) {
+             console.log("Attempting to render table...");
+             tableWrapper.innerHTML = ''; // Clear placeholder explicitly
+
+             // Ensure data format is suitable for simple-datatables (array of arrays)
+             let tableData;
+             try {
+                 tableData = data.map(row => headers.map(header => {
+                    // Handle null/undefined/objects potentially returned by PapaParse
+                    const value = row[header];
+                    if (value === null || typeof value === 'undefined') return '';
+                    if (typeof value === 'object') return JSON.stringify(value); // Basic object display
+                    return value;
+                 }));
+                 console.log("Transformed tableData (first 5 rows):", tableData.slice(0, 5));
+             } catch (transformError) {
+                 console.error("Error transforming data for table:", transformError);
+                 updateStatus("Error preparing data for table.", true);
+                 tableWrapper.innerHTML = `<p class="error">Error preparing data for table: ${transformError.message}</p>`;
+                 return;
+             }
+
+             // Create a table element for simple-datatables
+             const table = document.createElement('table');
+             table.id = 'dataTable' + Date.now(); // Use unique ID to help DataTable destroy/recreate
+             tableWrapper.appendChild(table);
+
+             try {
+                 console.log("Initializing simpleDatatables...");
+                 currentDataTable = new simpleDatatables.DataTable(table, {
+                     data: {
+                         headings: headers,
+                         data: tableData
+                     },
+                     searchable: true,
+                     sortable: true,
+                     pagination: true,
+                     perPage: 15, // Show a few more rows
+                     perPageSelect: [10, 15, 25, 50, 100],
+                     fixedHeight: true, // Helps performance with many rows
+                      labels: {
+                         placeholder: "Search table...",
+                         perPage: "{select} rows per page",
+                         noRows: "No entries found",
+                         info: "Showing {start} to {end} of {rows} entries",
+                     }
+                 });
+                 console.log("simpleDatatables Initialized.");
+             } catch (e) {
+                 console.error("Error initializing DataTable:", e);
+                 updateStatus(`Error creating table: ${e.message}. Check console.`, true);
+                 tableWrapper.innerHTML = `<p class="error">Error creating table: ${e.message}. Check Developer Console for details.</p>`;
+             }
+        }
+
+        function generateCharts(headers, data) {
+             console.log("Attempting to generate charts...");
+             chartContainer.innerHTML = '<h3>Suggested Charts</h3>'; // Clear placeholder/old charts
+
+             // Destroy previous Chart.js instances
+             currentCharts.forEach(chart => chart.destroy());
+             currentCharts = [];
+
+             if (!headers || !data || data.length === 0) {
+                 chartContainer.innerHTML += '<p>No data available for charting.</p>';
+                 return;
+             }
+
+             try {
+                 const colTypes = inferColumnTypes(headers, data);
+                 let chartsGenerated = 0;
+                 const MAX_CHARTS = 5; // Limit the number of charts generated
+
+                 // --- Categorical Bar Chart ---
+                 const categoricalCols = headers.filter(h => colTypes[h] === 'categorical' && colTypes[h+'_unique'] <= 25);
+                 if (categoricalCols.length > 0 && chartsGenerated < MAX_CHARTS) {
+                     const catCol = categoricalCols[0];
+                     console.log(`Generating Bar Chart for: ${catCol}`);
+                     const counts = data.reduce((acc, row) => {
+                         const value = row[catCol] ?? 'null';
+                         acc[value] = (acc[value] || 0) + 1;
+                         return acc;
+                     }, {});
+                     const categoricalLabels = Object.keys(counts);
+                     const categoricalDataValues = Object.values(counts);
+                     // *** MODIFICATION HERE: Build the datasets array explicitly ***
+                     const categoricalDatasets = [{
+                        label: `Count of ${catCol}`,
+                        data: categoricalDataValues,
+                        backgroundColor: 'rgba(255, 159, 64, 0.6)', // Example color
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1
+                     }];
+                     createChart(
+                         `Value Counts for '${catCol}'`,
+                         'bar',
+                         categoricalLabels, // Labels separate
+                         categoricalDatasets, // Pass the fully structured array
+                         `bar_${catCol}`
+                     );
+                     chartsGenerated++;
+                 }
+
+                 // --- Scatter Plot ---
+                 const numericCols = headers.filter(h => colTypes[h] === 'numeric');
+                 if (numericCols.length >= 2 && chartsGenerated < MAX_CHARTS) {
+                     const xCol = numericCols[0];
+                     const yCol = numericCols[1];
+                     console.log(`Generating Scatter Plot for: ${yCol} vs ${xCol}`);
+                     const scatterDataPoints = data.map(row => ({ x: row[xCol], y: row[yCol] }))
+                                             .filter(p => p.x != null && p.y != null && typeof p.x === 'number' && typeof p.y === 'number');
+                      if(scatterDataPoints.length > 0) {
+                         // *** MODIFICATION HERE: Already correct, but ensure structure matches others ***
+                         const scatterDatasets = [{
+                            label: `${yCol} vs ${xCol}`,
+                            data: scatterDataPoints,
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)'
+                         }];
+                         createChart(
+                            `Scatter Plot: '${yCol}' vs '${xCol}'`,
+                            'scatter',
+                            null, // No primary labels needed for scatter X axis (uses data.x)
+                            scatterDatasets, // Pass the structured array
+                            `scatter_${xCol}_${yCol}`
+                         );
+                         chartsGenerated++;
+                     } else {
+                          console.log("No valid data points for scatter plot.");
+                     }
+                 }
+
+                 // --- Line Chart ---
+                 const potentialXCol = headers.find(h => h.toLowerCase().includes('year') || h.toLowerCase().includes('date') || h === headers[0]);
+                 const firstNumericCol = headers.find(h => colTypes[h] === 'numeric' && h !== potentialXCol);
+                 if (potentialXCol && firstNumericCol && colTypes[potentialXCol] !== 'numeric_high_cardinality' && chartsGenerated < MAX_CHARTS) {
+                     console.log(`Generating Line Chart for: ${firstNumericCol} vs ${potentialXCol}`);
+                     const xLabels = data.map(row => row[potentialXCol] ?? 'N/A');
+                     const yDataValues = data.map(row => row[firstNumericCol]);
+                      // *** MODIFICATION HERE: Build the datasets array explicitly ***
+                     const lineDatasets = [{
+                        label: firstNumericCol,
+                        data: yDataValues,
+                        fill: false,
+                        borderColor: 'rgb(255, 99, 132)',
+                        tension: 0.1
+                     }];
+                     createChart(
+                        `Line Plot: '${firstNumericCol}' over '${potentialXCol}'`,
+                        'line',
+                        xLabels, // Pass labels
+                        lineDatasets, // Pass the structured array
+                        `line_${potentialXCol}_${firstNumericCol}`
+                     );
+                     chartsGenerated++;
+                 }
+
+                 // --- Histogram ---
+                 if (numericCols.length > 0 && chartsGenerated < MAX_CHARTS) {
+                    const histCol = numericCols[0]; // Use first numeric column *not* used as scatter X
+                    console.log(`Generating Histogram for: ${histCol}`);
+                    const values = data.map(row => row[histCol]).filter(v => typeof v === 'number');
+                    if (values.length > 0) {
+                        const bins = createHistogramBins(values);
+                        if (bins) {
+                             // *** MODIFICATION HERE: Build the datasets array explicitly ***
+                             const histogramDatasets = [{
+                                label: `Frequency of ${histCol}`,
+                                data: bins.counts,
+                                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                             }];
+                            createChart(
+                                `Histogram for '${histCol}'`,
+                                'bar', // Histogram is a bar chart
+                                bins.labels, // X-axis labels (bin ranges)
+                                histogramDatasets, // Pass the structured array
+                                `hist_${histCol}`
+                            );
+                             chartsGenerated++;
+                        } else {
+                            console.log("Could not create bins for histogram.");
+                        }
+                    }
+                 }
+
+
+                 if (chartsGenerated === 0) {
+                     chartContainer.innerHTML += '<p>Could not automatically generate relevant charts based on data types found.</p>';
+                 }
+                 console.log("Chart generation finished.");
+
+             } catch (chartError) {
+                 console.error("Error during chart generation:", chartError);
+                 updateStatus(`Error generating charts: ${chartError.message}`, true);
+                 chartContainer.innerHTML += `<p class="error">Error generating charts: ${chartError.message}</p>`;
+             }
+         }
+         // Very basic histogram binning
+         function createHistogramBins(values, numBins = 10) {
+             if (!values || values.length === 0) return null;
+             const min = Math.min(...values);
+             const max = Math.max(...values);
+             if (min === max) return null; // Avoid division by zero if all values are the same
+
+             const binSize = (max - min) / numBins;
+             const bins = { labels: [], counts: Array(numBins).fill(0) };
+
+             for (let i = 0; i < numBins; i++) {
+                 const binStart = min + i * binSize;
+                 const binEnd = binStart + binSize;
+                 bins.labels.push(`${binStart.toFixed(2)}-${binEnd.toFixed(2)}`);
+             }
+
+             values.forEach(value => {
+                 let binIndex = Math.floor((value - min) / binSize);
+                 // Handle edge case where value equals max
+                 if (binIndex === numBins) binIndex--;
+                 if (binIndex >= 0 && binIndex < numBins) {
+                     bins.counts[binIndex]++;
+                 }
+             });
+             console.log("Histogram bins:", bins);
+             return bins;
+         }
+
+
+         function inferColumnTypes(headers, data) {
+             const types = {};
+             const sampleSize = Math.min(data.length, 100); // Increase sample size slightly
+             if (sampleSize === 0) return types;
+
+             headers.forEach(header => {
+                 let numericCount = 0;
+                 let stringCount = 0;
+                 let boolCount = 0;
+                 let potentialCategorical = true;
+                 let uniqueValues = new Set();
+                 const MAX_CATEGORICAL_UNIQUE = 30; // Max unique values to be considered categorical
+
+                 for (let i = 0; i < sampleSize; i++) {
+                     const value = data[i] ? data[i][header] : undefined; // Check if row exists
+                     uniqueValues.add(value);
+
+                     if (value === null || typeof value === 'undefined') continue; // Skip nulls for typing
+
+                     if (typeof value === 'number') {
+                         numericCount++;
+                     } else if (typeof value === 'boolean') {
+                         boolCount++;
+                     } else if (typeof value === 'string') {
+                         stringCount++;
+                         // Check if string *could* be a number (handle cases like "123.45")
+                         if (!isNaN(value) && value.trim() !== '') {
+                             // Treat as potential number if it parses, could refine later
+                         }
+                         // Check for boolean-like strings
+                         const lowerVal = value.toLowerCase();
+                         if (lowerVal === 'true' || lowerVal === 'false') {
+                             boolCount++;
+                         }
+                     }
+                 }
+
+                 // Determine type based on counts
+                 if (numericCount > (sampleSize / 2) && stringCount < (sampleSize / 10)) { // Primarily numbers
+                      types[header] = 'numeric';
+                      if(uniqueValues.size > sampleSize * 0.8) { // Check if numbers are mostly unique
+                           types[header] = 'numeric_high_cardinality';
+                      }
+                 } else if (boolCount > (sampleSize / 2) && stringCount < (sampleSize / 10)) { // Primarily booleans or 'true'/'false' strings
+                      types[header] = 'boolean'; // Treat as boolean for potential categorical counts
+                       potentialCategorical = true; // Booleans are categorical
+                 } else { // Primarily strings or mixed
+                     types[header] = 'text';
+                     if (uniqueValues.size <= MAX_CATEGORICAL_UNIQUE && uniqueValues.size < sampleSize) { // Heuristic: Check unique count relative to sample size and absolute max
+                          potentialCategorical = true;
+                     } else {
+                          potentialCategorical = false;
+                     }
+                 }
+
+                 if (potentialCategorical && types[header] !== 'numeric') {
+                     types[header] = 'categorical'; // Overwrite if fits categorical criteria
+                     types[header+'_unique'] = uniqueValues.size;
+                 } else if (!potentialCategorical && types[header] === 'text') {
+                     types[header] = 'text_high_cardinality';
+                 }
+
+             });
+             console.log("Inferred Types:", types);
+             return types;
+         }
+
+         function createChart(title, type, labels, datasetsArray, idSuffix) { // Changed 4th param name
+              const canvasId = `chart-${idSuffix.replace(/[^a-zA-Z0-9]/g, '-')}`;
+              if (document.getElementById(canvasId)) {
+                  console.warn(`Canvas with ID ${canvasId} already exists. Skipping chart: ${title}`);
+                  return;
+              }
+
+              const canvasContainer = document.createElement('div');
+              canvasContainer.style.marginBottom = '20px';
+
+              const canvas = document.createElement('canvas');
+              canvas.id = canvasId;
+              canvas.width = 400;
+              canvas.height = 250;
+              canvasContainer.appendChild(canvas);
+              chartContainer.appendChild(canvasContainer);
+
+              const ctx = canvas.getContext('2d');
+
+              // *** MODIFICATION HERE: Simpler data structure assignment ***
+              const chartConfigData = {
+                  labels: labels, // Pass labels (can be null for scatter)
+                  datasets: datasetsArray // Directly use the passed, pre-structured array
+              };
+
+             try {
+                 const chart = new Chart(ctx, {
+                     type: type,
+                     data: chartConfigData, // Pass the structured config data
+                     options: {
+                         responsive: true,
+                         maintainAspectRatio: false,
+                         plugins: {
+                             title: { display: true, text: title },
+                             legend: { display: (datasetsArray && datasetsArray.length > 1) } // Check the passed array
+                         },
+                         scales: (type === 'scatter' || type === 'line' || (type === 'bar' && labels && labels.length > 50)) ? {
+                            x: {
+                                title: { display: !!labels, text: labels ? 'Category/Bin/X-Value' : '' }, // Show axis title only if labels exist
+                                ticks: { autoSkip: true, maxRotation: 0, minRotation: 0 }
+                            },
+                            y: { title: { display: true, text: 'Value/Count' } }
+                         } : (type === 'bar' ? {
+                            x: { title: { display: !!labels, text: 'Category/Bin' } }, // Add X axis title for bar
+                            y: { title: { display: true, text: 'Count' } }
+                         } : {})
+                     }
+                 });
+                 currentCharts.push(chart);
+                 console.log(`Chart '${title}' created successfully.`);
+             } catch (e) {
+                 console.error(`Error creating ${type} chart (${title}):`, e);
+                 canvasContainer.innerHTML = `<p class="error">Error creating chart: ${e.message}</p>`;
+             }
+         }
+    </script>
+</body>
+</html>
