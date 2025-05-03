@@ -12,6 +12,7 @@
 #define OAM_PAGE        0x02 // Page number for OAM DMA ($4014)
 #define MAX_SPRITES     64   // NES hardware limit
 #define HIDE_SPRITE_Y   0xF0 // Y coordinate to hide a sprite
+#define LAST_VALID_OAM_INDEX 252 // (MAX_SPRITES - 1) * 4
 
 // Player Sprite (Sprite 0)
 #define PLAYER_SPRITE_TILE     0x05   // !!! TILE $05 MUST HAVE GRAPHICS IN YOUR CHR !!!
@@ -19,13 +20,24 @@
 #define PLAYER_OAM_OFFSET      0 // OAM starts at index 0 (bytes 0-3)
 #define PLAYER_SPRITE_WIDTH    8
 #define PLAYER_SPRITE_HEIGHT   8
+#define PLAYER_MAX_HEALTH      3 // How many hits the player can take
+#define PLAYER_INVINCIBILITY_FRAMES 60 // Frames of invincibility after getting hit (~1 second)
 
 // Enemy Configuration
 #define ENEMY_SPRITE_TILE      0x06   // !!! TILE $06 MUST HAVE GRAPHICS IN YOUR CHR !!!
 #define ENEMY_SPRITE_PALETTE   1
 #define ENEMY_SPRITE_WIDTH     8
 #define ENEMY_SPRITE_HEIGHT    8
-#define MAX_ENEMIES            30 // Max active enemies (ensure MAX_ENEMIES + 1 <= MAX_SPRITES)
+#define MAX_ENEMIES            30 // Max active enemies (ensure MAX_ENEMIES + 1 + MAX_PROJECTILES <= MAX_SPRITES)
+
+// Projectile Configuration
+#define MAX_PROJECTILES        5  // Max player bullets on screen
+#define PROJECTILE_SPRITE_TILE 0x07 // !!! TILE $07 MUST HAVE GRAPHICS IN YOUR CHR !!!
+#define PROJECTILE_SPRITE_PALETTE 0 // Use player palette for projectiles
+#define PROJECTILE_SPEED       2  // Pixels per frame movement
+#define PROJECTILE_SPRITE_WIDTH 8 // Assuming 8x8 sprite
+#define PROJECTILE_SPRITE_HEIGHT 8 // Assuming 8x8 sprite
+#define FIRE_BUTTON_MASK       0x80 // Use 0x80 for Button A (standard mapping)
 
 // Screen Boundaries / Spawning
 #define MIN_X 8
@@ -42,387 +54,327 @@ typedef struct {
     unsigned char active; // 0 = inactive, 1 = active
 } Enemy;
 
+typedef struct {
+    unsigned char x, y;
+    unsigned char active; // 0 = inactive, 1 = active
+} Projectile;
+
+
 // --- Global Variables ---
-// Use a pointer for OAM buffer for clarity that it maps to hardware address
-unsigned char* const oam_buffer = (unsigned char*)OAM_ADDRESS;
-unsigned char player_x;
-unsigned char player_y;
-Enemy enemies[MAX_ENEMIES];
-unsigned char active_enemy_count = 0;
-unsigned int score = 0;
-unsigned char score_changed = 0; // Flag to update score display
-unsigned char frame_count = 0;   // Counter for spawning
-unsigned int random_seed = 1;    // Seed for PRNG
+unsigned char* const oam_buffer = (unsigned char*)OAM_ADDRESS; // OAM buffer pointer
+unsigned char player_x, player_y; // Player position
+unsigned char player_health;      // Player health
+unsigned char player_hit_timer;   // Player invincibility timer
+Enemy enemies[MAX_ENEMIES];       // Enemy array
+unsigned char active_enemy_count; // Count of active enemies
+Projectile projectiles[MAX_PROJECTILES]; // Projectile array
+unsigned int score;               // Game score
+unsigned char score_changed;      // Score update flag
+unsigned char frame_count;        // Frame counter for spawning
+unsigned int random_seed = 1;     // PRNG seed
+static unsigned char last_joy_status = 0; // Previous joypad state
+
 
 // --- PRNG ---
-// Simple Pseudo-Random Number Generator (Linear Congruential Generator)
 unsigned char pseudo_rand(void) {
     random_seed = (random_seed * 1103515245 + 12345);
-    // Return one byte of the result
     return (unsigned char)((random_seed >> 8) & 0xFF);
 }
 
 // --- PPU Helpers ---
-// Set the PPU VRAM address for subsequent reads/writes
 void ppu_set_address(unsigned int addr) {
-    PPU.vram.address = (addr >> 8); // High byte
-    PPU.vram.address = (addr & 0xFF); // Low byte
+    PPU.vram.address = (addr >> 8);
+    PPU.vram.address = (addr & 0xFF);
 }
-
-// Write a single byte to the PPU VRAM at the current address
 void ppu_write_data(unsigned char data) {
     PPU.vram.data = data;
 }
-
-// Trigger the OAM DMA transfer (copies 256 bytes from CPU RAM page OAM_PAGE to PPU OAM)
 void trigger_oam_dma(void) {
     APU.sprite.dma = OAM_PAGE;
-    // This takes 513-514 CPU cycles, happens "instantly" from C code perspective
 }
 
 // --- Input ---
-// Read the status of Joypad 1
 unsigned char read_joypad1(void) {
     unsigned char status = 0, i;
-    JOYPAD[0] = 1; // Strobe controller 1 to latch button states
-    JOYPAD[0] = 0; // Clear strobe
-    // Read the 8 button states (A, B, Select, Start, Up, Down, Left, Right)
-    for (i = 0; i < 8; ++i) {
-        status >>= 1; // Make space for the next bit
-        if (JOYPAD[0] & 1) { // Check the least significant bit
-            status |= 0x80; // Set the most significant bit if button is pressed
-        }
-    }
-    // In nes.h: JOY_A_MASK=0x80, JOY_B_MASK=0x40, ..., JOY_RIGHT_MASK=0x01
-    return status;
+    JOYPAD[0] = 1; JOYPAD[0] = 0; // Strobe
+    for (i = 0; i < 8; ++i) { status >>= 1; if (JOYPAD[0] & 1) { status |= 0x80; } }
+    return status; // Bit order: A, B, Select, Start, Up, Down, Left, Right (7..0)
 }
 
 // --- Palette ---
-// Define the color palettes (32 bytes total) - USING THE USER'S ORIGINAL
 const unsigned char palette[32] = {
-    /* Background Palettes */
     COLOR_BLACK, COLOR_BLUE, COLOR_BLUE, COLOR_BLUE,            // BG Pal 0
     COLOR_BLACK, COLOR_WHITE, COLOR_RED, COLOR_YELLOW,          // BG Pal 1 (Text)
     COLOR_BLACK, COLOR_GREEN, COLOR_LIGHTGREEN, COLOR_WHITE,    // BG Pal 2
     COLOR_BLACK, COLOR_RED, COLOR_LIGHTRED, COLOR_WHITE,        // BG Pal 3
-
-    /* Sprite Palettes */
-    COLOR_BLACK, COLOR_WHITE, COLOR_RED, COLOR_BLUE,            // Sprite Pal 0 (Player)
+    COLOR_BLACK, COLOR_WHITE, COLOR_RED, COLOR_BLUE,            // Sprite Pal 0 (Player & Projectiles)
     COLOR_BLACK, COLOR_YELLOW, COLOR_ORANGE, COLOR_BROWN,       // Sprite Pal 1 (Enemy)
     COLOR_BLACK, COLOR_CYAN, COLOR_LIGHTBLUE, COLOR_WHITE,      // Sprite Pal 2
     COLOR_BLACK, COLOR_VIOLET, COLOR_LIGHTRED, COLOR_WHITE      // Sprite Pal 3
 };
 
 // --- Text Display ---
-#define SCORE_TEXT_X 10 // Tile X position for "SCORE "
-#define SCORE_TEXT_Y 2  // Tile Y position for score line
-#define SCORE_DIGIT_X (SCORE_TEXT_X + 6) // Tile X position for first score digit
-#define SCORE_MAX_DIGITS 5 // How many digits to display for the score
-#define SCORE_TEXT_PALETTE_IDX 1 // Use BG Palette 1 for the score text
+#define SCORE_TEXT_X 10
+#define SCORE_TEXT_Y 2
+#define SCORE_DIGIT_X (SCORE_TEXT_X + 6)
+#define SCORE_MAX_DIGITS 5
+#define SCORE_TEXT_PALETTE_IDX 1
 
-// Helper to set the palette for a region of the background attribute table
-// NOTE: This is a simplified version, might cause palette clashes if tiles
-//       aren't aligned to 16x16 pixel (2x2 tile) attribute boundaries.
 void set_tile_palette(unsigned char x_tile, unsigned char y_tile, unsigned char pal_idx, unsigned char width_in_tiles) {
     unsigned int start_attr_addr;
     unsigned char start_attr_col, end_attr_col, attr_row, current_attr_col;
-    unsigned char attr_byte_value, shift_amount, mask;
-
-    attr_row = y_tile / 4; // Which row in the attribute table (8 rows total)
-    start_attr_col = x_tile / 4; // Which column in the attribute table (8 columns total)
-    end_attr_col = (x_tile + width_in_tiles - 1) / 4; // Last column affected
-
+    attr_row = y_tile / 4; start_attr_col = x_tile / 4; end_attr_col = (x_tile + width_in_tiles - 1) / 4;
     for (current_attr_col = start_attr_col; current_attr_col <= end_attr_col; ++current_attr_col) {
-        // Calculate the address of the attribute byte
         start_attr_addr = ATTRIBUTE_A + (attr_row * 8) + current_attr_col;
-
-        // Determine which 2x2 tile quadrant we are in within the 4x4 attribute block
-        // Top-Left:    bits 1:0
-        // Top-Right:   bits 3:2
-        // Bottom-Left: bits 5:4
-        // Bottom-Right:bits 7:6
-        shift_amount = ((y_tile % 4) / 2) * 4 + ((x_tile % 4) / 2) * 2;
-        mask = 0xFF ^ (3 << shift_amount); // Create a mask to clear the relevant 2 bits
-        attr_byte_value = (pal_idx & 0x03) << shift_amount; // Prepare the new palette bits
-
-        // NOTE: Reading attribute RAM is tricky/slow. This simplified version just overwrites
-        // the whole attribute byte assuming adjacent areas use the same palette or are unused.
-        // A more robust version would read the existing byte, mask, OR, and write back.
-        // For simple text display, overwriting often works if the layout is planned.
-        // Let's just set the whole byte for simplicity here, assuming it's okay for the score area.
-        // We'll make all four 16x16 blocks in this attribute cell use the score palette.
-        ppu_set_address(start_attr_addr);
-        ppu_write_data((pal_idx * 0x55)); // Sets all 4 quadrants to pal_idx
+        ppu_set_address(start_attr_addr); ppu_write_data((pal_idx * 0x55));
     }
 }
-
-
-// Writes score digits to VRAM (assumes PPU address is already set)
-// Assumes tiles '0' through '9' are at CHR addresses 0x30-0x39
 void write_score_digits_vram(unsigned int s) {
-    unsigned char i, digit_tile;
-    unsigned char leading_zero = 1; // Flag to suppress leading zeros
-    unsigned int divisor = 10000; // For 5 digits
-
+    unsigned char i, digit_tile, leading_zero = 1; unsigned int divisor = 10000;
     for(i = 0; i < SCORE_MAX_DIGITS; ++i) {
-        digit_tile = (s / divisor) % 10; // Get the current digit
-
+        digit_tile = (s / divisor) % 10;
         if (digit_tile != 0 || !leading_zero || i == SCORE_MAX_DIGITS - 1) {
-            // Write the digit tile ('0' + digit value)
-            ppu_write_data(digit_tile + 0x30); // Assumes ASCII-like mapping in CHR
-            leading_zero = 0; // Stop suppressing zeros after the first non-zero digit
-        } else {
-            // Write a blank tile (or space, tile 0x00 assumed blank) for leading zeros
-            ppu_write_data(0x00); // Use tile $00 for space/blank
-        }
-        divisor /= 10; // Move to the next digit place
+            ppu_write_data(digit_tile + 0x30); leading_zero = 0; // Use tile $30..$39
+        } else { ppu_write_data(0x00); } // Use tile $00 (blank)
+        divisor /= 10;
     }
 }
-
-// Updates the score display on the screen
 void update_score_display(void) {
     unsigned int addr = NAMETABLE_A + (SCORE_TEXT_Y * 32) + SCORE_DIGIT_X;
-    ppu_set_address(addr); // Set PPU address to where the score digits start
-    write_score_digits_vram(score); // Write the digits
+    ppu_set_address(addr); write_score_digits_vram(score);
 }
 
 // --- Collision ---
-// Simple Axis-Aligned Bounding Box (AABB) collision check
-// Assumes both player and enemy are 8x8 pixels
-unsigned char check_collision(unsigned char x1, unsigned char y1, unsigned char x2, unsigned char y2) {
-    // Check for overlap on X axis and Y axis
-    return (x1 < (x2 + ENEMY_SPRITE_WIDTH) && (x1 + PLAYER_SPRITE_WIDTH) > x2 &&
-            y1 < (y2 + ENEMY_SPRITE_HEIGHT) && (y1 + PLAYER_SPRITE_HEIGHT) > y2);
+unsigned char check_collision(unsigned char x1, unsigned char y1, unsigned char w1, unsigned char h1,
+                              unsigned char x2, unsigned char y2, unsigned char w2, unsigned char h2) {
+    return (x1 < (x2 + w2) && (x1 + w1) > x2 && y1 < (y2 + h2) && (y1 + h1) > y2);
 }
 
 // --- Enemy Spawning ---
 void spawn_enemy(void) {
-    unsigned char i;
-    unsigned char spawn_side;
-    signed int spawn_x_s, spawn_y_s; // Use signed temporary for calculation ease
-
-    // Find an inactive enemy slot
+    unsigned char i, spawn_side; signed int spawn_x_s, spawn_y_s;
     for (i = 0; i < MAX_ENEMIES; ++i) {
         if (!enemies[i].active) {
-            enemies[i].active = 1;
-            active_enemy_count++;
-
-            // Choose a random side to spawn from (0=Top, 1=Bottom, 2=Left, 3=Right)
-            spawn_side = pseudo_rand() & 3; // Use lower 2 bits for 0-3
-
-            // Calculate spawn position just off-screen
+            enemies[i].active = 1; active_enemy_count++;
+            spawn_side = pseudo_rand() & 3;
             switch (spawn_side) {
-                case 0: // Top
-                    spawn_x_s = MIN_X + (pseudo_rand() % (MAX_X - MIN_X + 1));
-                    spawn_y_s = MIN_Y - SPAWN_MARGIN;
-                    break;
-                case 1: // Bottom
-                    spawn_x_s = MIN_X + (pseudo_rand() % (MAX_X - MIN_X + 1));
-                    spawn_y_s = MAX_Y + SPAWN_MARGIN;
-                    break;
-                case 2: // Left
-                    spawn_x_s = MIN_X - SPAWN_MARGIN;
-                    spawn_y_s = MIN_Y + (pseudo_rand() % (MAX_Y - MIN_Y + 1));
-                    break;
-                case 3: // Right
-                default: // Add default to handle potential randomness issues
-                    spawn_x_s = MAX_X + SPAWN_MARGIN;
-                    spawn_y_s = MIN_Y + (pseudo_rand() % (MAX_Y - MIN_Y + 1));
-                    break;
+                case 0: spawn_x_s = MIN_X + (pseudo_rand() % (MAX_X - MIN_X + 1)); spawn_y_s = MIN_Y - SPAWN_MARGIN; break;
+                case 1: spawn_x_s = MIN_X + (pseudo_rand() % (MAX_X - MIN_X + 1)); spawn_y_s = MAX_Y + SPAWN_MARGIN; break;
+                case 2: spawn_x_s = MIN_X - SPAWN_MARGIN; spawn_y_s = MIN_Y + (pseudo_rand() % (MAX_Y - MIN_Y + 1)); break;
+                default:spawn_x_s = MAX_X + SPAWN_MARGIN; spawn_y_s = MIN_Y + (pseudo_rand() % (MAX_Y - MIN_Y + 1)); break;
             }
-
-            // Clamp coordinates to unsigned char range after calculation
-            // Note: Off-screen coordinates are fine initially, they will move on screen.
-            // Be careful with underflow/overflow if SPAWN_MARGIN is large.
-            if (spawn_x_s < 0) enemies[i].x = 0;
-            else if (spawn_x_s > 255) enemies[i].x = 255;
-            else enemies[i].x = (unsigned char)spawn_x_s;
-
-            if (spawn_y_s < 0) enemies[i].y = 0;
-            else if (spawn_y_s > 255) enemies[i].y = 255;
-            else enemies[i].y = (unsigned char)spawn_y_s;
-
-            return; // Exit after spawning one enemy
+            if (spawn_x_s < 0) enemies[i].x = 0; else if (spawn_x_s > 255) enemies[i].x = 255; else enemies[i].x = (unsigned char)spawn_x_s;
+            if (spawn_y_s < 0) enemies[i].y = 0; else if (spawn_y_s > 255) enemies[i].y = 255; else enemies[i].y = (unsigned char)spawn_y_s;
+            return;
         }
     }
-    // If no inactive slot found, do nothing
 }
 
-// --- Main ---
-int main(void) {
-    unsigned char i;
+// --- Game Over ---
+void game_over_halt(void) {
+    PPU.mask = 0x00; // Turn off rendering
+    while(1);        // Halt execution
+}
+
+// --- Main Function ---
+void main(void) {
+    unsigned char i, j; // Loop counters
     unsigned char joy_status;
     unsigned int vram_addr;
-    unsigned char oam_idx; // Index into oam_buffer (tracks current sprite slot * 4)
+    unsigned char oam_idx; // OAM buffer index
+
+    // Declare draw_player here, OUTSIDE the main loop.
+    // We will just set its value inside the loop.
+    // THIS IS A CHANGE from the previous attempt.
+    unsigned char draw_player;
+
 
     // --- Initial Setup ---
-    // Disable PPU rendering and NMI during setup
-    PPU.control = 0x00; // NMI OFF, standard sprites/BG addresses
-    PPU.mask = 0x00;    // Rendering OFF (BG and Sprites)
-
-    // Wait for VBlank to ensure PPU is idle
+    PPU.control = 0x00; PPU.mask = 0x00; // PPU Off
     waitvsync();
-
-    // Load palette data into PPU RAM ($3F00 - $3F1F)
-    ppu_set_address(PALETTE_RAM);
-    for (i = 0; i < 32; ++i) {
-        ppu_write_data(palette[i]);
-    }
-
-    // Clear Nametable A ($2000 - $23BF) - Fill with tile $00 (blank)
-    ppu_set_address(NAMETABLE_A);
-    for (vram_addr = 0; vram_addr < 960; ++vram_addr) { // 32x30 tiles
-        ppu_write_data(0x00);
-    }
-
-    // Clear Attribute Table A ($23C0 - $23FF) - Set all palettes to 0
-    ppu_set_address(ATTRIBUTE_A);
-    for (i = 0; i < 64; ++i) { // 8x8 attribute entries
-        ppu_write_data(0x00); // All palette 0
-    }
-
-    // Set palette for the score text area
-    set_tile_palette(SCORE_TEXT_X, SCORE_TEXT_Y, SCORE_TEXT_PALETTE_IDX, 6 + SCORE_MAX_DIGITS);
-
-    // Write "SCORE " text to VRAM
-    // Assumes A=0x41, B=0x42 etc. in your CHR font map
-    vram_addr = NAMETABLE_A + (SCORE_TEXT_Y * 32) + SCORE_TEXT_X;
+    ppu_set_address(PALETTE_RAM); for (i = 0; i < 32; ++i) ppu_write_data(palette[i]); // Load palettes
+    ppu_set_address(NAMETABLE_A); for (vram_addr = 0; vram_addr < 960; ++vram_addr) ppu_write_data(0x00); // Clear nametable
+    ppu_set_address(ATTRIBUTE_A); for (i = 0; i < 64; ++i) ppu_write_data(0x00); // Clear attributes
+    set_tile_palette(SCORE_TEXT_X, SCORE_TEXT_Y, SCORE_TEXT_PALETTE_IDX, 6 + SCORE_MAX_DIGITS); // Set score palette
+    vram_addr = NAMETABLE_A + (SCORE_TEXT_Y * 32) + SCORE_TEXT_X; // Write "SCORE "
     ppu_set_address(vram_addr);
-    ppu_write_data('S'-'A'+0x41); // S
-    ppu_write_data('C'-'A'+0x41); // C
-    ppu_write_data('O'-'A'+0x41); // O
-    ppu_write_data('R'-'A'+0x41); // R
-    ppu_write_data('E'-'A'+0x41); // E
-    ppu_write_data(0x00); // Space (using blank tile $00)
+    ppu_write_data('S'-'A'+0x41); ppu_write_data('C'-'A'+0x41); ppu_write_data('O'-'A'+0x41);
+    ppu_write_data('R'-'A'+0x41); ppu_write_data('E'-'A'+0x41); ppu_write_data(0x00);
 
-    // Display initial score (0)
-    update_score_display(); // Writes the digits '00000'
+    memset(oam_buffer, HIDE_SPRITE_Y, 256); // Clear OAM buffer in RAM
 
-    // Initialize local OAM buffer (all sprites hidden)
-    // This buffer resides at $0200-$02FF in CPU RAM
-    memset(oam_buffer, HIDE_SPRITE_Y, 256);
-
-    // Initialize player position (center screen approx)
-    player_x = 128;
-    player_y = 112;
-
-    // Initialize enemies (all inactive)
-    for (i = 0; i < MAX_ENEMIES; ++i) {
-        enemies[i].active = 0;
-    }
-    active_enemy_count = 0;
-    score = 0;
-    score_changed = 0;
-    frame_count = 0;
-
-    // Seed the random number generator
-    // You might want a better way to seed if possible (e.g., frame counter on title screen)
-    random_seed = 123; // Fixed seed for now
+    // Init Player
+    player_x = 128; player_y = 112; player_health = PLAYER_MAX_HEALTH; player_hit_timer = 0;
+    // Init Enemies
+    for (i = 0; i < MAX_ENEMIES; ++i) enemies[i].active = 0; active_enemy_count = 0;
+    // Init Projectiles
+    for(i = 0; i < MAX_PROJECTILES; ++i) projectiles[i].active = 0;
+    // Init Game State
+    score = 0; score_changed = 1; frame_count = 0; last_joy_status = 0; random_seed = 123;
 
     // --- Turn Rendering On ---
-    // Wait for VBlank again before enabling PPU
     waitvsync();
-    PPU.scroll = 0x00; // Reset scroll registers
-    PPU.scroll = 0x00;
-    PPU.mask = 0x1E;    // Enable BG, Sprites, Leftmost 8px of BG/Sprites ON
-    PPU.control = 0x90; // NMI ON, Sprites from $0000, BG from $1000 (Change if needed!)
-                        // If your BG tiles are in the first 256 CHR tiles, use 0x80
-                        // Use 0x90 if sprites are $0000, BG $1000
+    PPU.scroll = 0x00; PPU.scroll = 0x00; // Reset scroll
+    PPU.mask = 0x1E;    // BG ON, Sprites ON, Left Columns ON
+    PPU.control = 0x90; // NMI ON, Sprites $0000, BG $1000 (Use 0x80 if BG is $0000)
 
-    // --- Main Loop ---
+    // --- Main Game Loop ---
     while (1) {
-        // --- Start of Frame ---
-        waitvsync(); // Wait for VBlank signal (NMI handler runs here implicitly)
+        waitvsync(); // Wait for VBlank
 
         // --- PPU Updates (during VBlank) ---
-        // 1. Send the OAM data prepared *last* frame to the PPU
-        trigger_oam_dma();
+        trigger_oam_dma(); // Send OAM data from LAST frame
+        if (score_changed) { update_score_display(); score_changed = 0; } // Update score if needed
 
-        // 2. Update score display in VRAM if it changed
-        if (score_changed) {
-            update_score_display();
-            score_changed = 0; // Reset flag
-        }
+        // --- Prepare OAM Buffer for NEXT frame ---
+        memset(oam_buffer, HIDE_SPRITE_Y, 256); // Clear RAM buffer first
+        oam_idx = PLAYER_OAM_OFFSET; // Reset OAM index for this frame
 
-        // --- Prepare OAM Buffer for NEXT frame (Best Practice) ---
-        // 1. Hide ALL sprites in the buffer first. Crucial step!
-        memset(oam_buffer, HIDE_SPRITE_Y, 256);
 
-        // 2. Write ONLY the player's current data into the buffer.
-        //    Check if player Y is valid for drawing (not 0 and not >= HIDE_SPRITE_Y)
-        if (player_y >= 1 && player_y < HIDE_SPRITE_Y) {
-            oam_buffer[PLAYER_OAM_OFFSET + 0] = player_y - 1; // Y pos (Y-1 rule)
-            oam_buffer[PLAYER_OAM_OFFSET + 1] = PLAYER_SPRITE_TILE; // Tile index
-            oam_buffer[PLAYER_OAM_OFFSET + 2] = (PLAYER_SPRITE_PALETTE & 0x03); // Attributes (Palette)
-            oam_buffer[PLAYER_OAM_OFFSET + 3] = player_x; // X pos
-        }
-        // No else needed: if player Y is invalid, the memset already hid the sprite.
+        // !!! CRITICAL DRAW_PLAYER SECTION !!!
+        // Check syntax immediately before and after this block carefully.
 
-        // 3. Add active enemies after the player.
-        oam_idx = PLAYER_OAM_OFFSET + 4; // Start enemies at sprite slot 1 (index 4)
-        for (i = 0; i < MAX_ENEMIES; ++i) {
-            if (enemies[i].active) {
-                 // Check if there is space left in OAM (max 64 sprites total)
-                 if (oam_idx < (MAX_SPRITES * 4)) {
-                    // Ensure enemy Y is valid before writing to OAM
-                    if(enemies[i].y >= 1 && enemies[i].y < HIDE_SPRITE_Y) {
-                         oam_buffer[oam_idx + 0] = enemies[i].y - 1; // Y pos (Y-1)
-                         oam_buffer[oam_idx + 1] = ENEMY_SPRITE_TILE; // Tile Index
-                         oam_buffer[oam_idx + 2] = (ENEMY_SPRITE_PALETTE & 0x03); // Attributes (Palette)
-                         oam_buffer[oam_idx + 3] = enemies[i].x; // X pos
+        // Set default value for draw_player for this frame.
+        // draw_player was declared OUTSIDE the loop this time.
+        draw_player = 1;
 
-                         oam_idx += 4; // Move to next sprite slot *only if this one was written*
-                    }
-                    // If enemy Y is invalid, we implicitly leave its OAM slot hidden (from memset)
-                 } else {
-                    break; // Stop processing enemies if OAM buffer is full
-                 }
+        // Check if player is invincible and should flash (be hidden)
+        if (player_hit_timer > 0) {
+            if ((player_hit_timer % 8) < 4) { // Hidden part of the flash cycle
+                 draw_player = 0; // Set flag to NOT draw player this frame
             }
         }
-        // 4. No need for a final loop to hide remaining sprites, memset did it at the start.
+
+        // Now, USE the draw_player flag to decide OAM write
+        // Ensure the line above this has a correct ending (like ';')
+        // Line 392 was pointing around here.
+        if (draw_player && player_y >= 1 && player_y < HIDE_SPRITE_Y) {
+            oam_buffer[oam_idx + 0] = player_y - 1;
+            oam_buffer[oam_idx + 1] = PLAYER_SPRITE_TILE;
+            oam_buffer[oam_idx + 2] = (PLAYER_SPRITE_PALETTE & 0x03);
+            oam_buffer[oam_idx + 3] = player_x;
+        }
+        // Ensure the line below this starts correctly.
+        oam_idx += 4; // Always advance index past player sprite slot
+
+        // !!! END OF CRITICAL SECTION !!!
 
 
-        // --- Game Logic (updates state for the *next* frame) ---
-        // Read Input
-        joy_status = read_joypad1();
-        if ((joy_status & JOY_UP_MASK)    && player_y > MIN_Y) player_y--;
-        if ((joy_status & JOY_DOWN_MASK)  && player_y < MAX_Y) player_y++;
-        if ((joy_status & JOY_LEFT_MASK)  && player_x > MIN_X) player_x--;
+        // Write Active Enemies to OAM
+        for (i = 0; i < MAX_ENEMIES; ++i) {
+            if (enemies[i].active) {
+                 if (oam_idx <= LAST_VALID_OAM_INDEX) {
+                    if(enemies[i].y >= 1 && enemies[i].y < HIDE_SPRITE_Y) {
+                         oam_buffer[oam_idx + 0] = enemies[i].y - 1;
+                         oam_buffer[oam_idx + 1] = ENEMY_SPRITE_TILE;
+                         oam_buffer[oam_idx + 2] = (ENEMY_SPRITE_PALETTE & 0x03);
+                         oam_buffer[oam_idx + 3] = enemies[i].x;
+                         oam_idx += 4;
+                    }
+                 } else { break; } // OAM full
+            }
+        }
+
+        // Write Active Projectiles to OAM
+        for (i = 0; i < MAX_PROJECTILES; ++i) {
+            if (projectiles[i].active) {
+                if (oam_idx <= LAST_VALID_OAM_INDEX) {
+                    if(projectiles[i].y >= 1 && projectiles[i].y < HIDE_SPRITE_Y) {
+                         oam_buffer[oam_idx + 0] = projectiles[i].y - 1;
+                         oam_buffer[oam_idx + 1] = PROJECTILE_SPRITE_TILE;
+                         oam_buffer[oam_idx + 2] = (PROJECTILE_SPRITE_PALETTE & 0x03);
+                         oam_buffer[oam_idx + 3] = projectiles[i].x;
+                         oam_idx += 4;
+                    }
+                } else { break; } // OAM full
+            }
+        }
+
+        // --- Game Logic ---
+        if (player_hit_timer > 0) player_hit_timer--; // Update invincibility timer
+
+        joy_status = read_joypad1(); // Read input
+
+        // Player Movement
+        if ((joy_status & JOY_UP_MASK) && player_y > MIN_Y) player_y--;
+        if ((joy_status & JOY_DOWN_MASK) && player_y < MAX_Y) player_y++;
+        if ((joy_status & JOY_LEFT_MASK) && player_x > MIN_X) player_x--;
         if ((joy_status & JOY_RIGHT_MASK) && player_x < MAX_X) player_x++;
 
-        // --- Enemy Logic ---
-        // Spawning
-        frame_count++;
-        if ((frame_count >= SPAWN_INTERVAL) && (active_enemy_count < MAX_ENEMIES)) {
-             spawn_enemy(); // Try to spawn a new enemy
-             frame_count = 0; // Reset spawn timer
-        }
-
-        // Movement & Collision
-        for (i = 0; i < MAX_ENEMIES; ++i) {
-            if (enemies[i].active) {
-                // Simple movement: Move one pixel towards player per frame
-                if (enemies[i].y < player_y) enemies[i].y++;
-                else if (enemies[i].y > player_y) enemies[i].y--;
-
-                if (enemies[i].x < player_x) enemies[i].x++;
-                else if (enemies[i].x > player_x) enemies[i].x--;
-
-                // Check for collision with player
-                if (check_collision(player_x, player_y, enemies[i].x, enemies[i].y)) {
-                    // On collision: Deactivate enemy, decrement count, increase score
-                    enemies[i].active = 0;
-                    active_enemy_count--;
-                    score++;
-                    score_changed = 1; // Flag that score needs redraw next VBlank
+        // Player Firing (Button A - 0x80)
+        if ((joy_status & FIRE_BUTTON_MASK) && !(last_joy_status & FIRE_BUTTON_MASK)) {
+            for (i = 0; i < MAX_PROJECTILES; ++i) {
+                if (!projectiles[i].active) {
+                    projectiles[i].active = 1;
+                    projectiles[i].x = player_x; projectiles[i].y = player_y;
+                    break;
                 }
             }
-        } // End enemy loop
+        }
+        last_joy_status = joy_status; // Store for next frame
 
-        // --- End of Frame Logic ---
-        // The loop repeats, starting with waitvsync()
+        // --- Projectile Logic ---
+        for (i = 0; i < MAX_PROJECTILES; ++i) {
+            if (projectiles[i].active) {
+                // 1. Move
+                if (projectiles[i].y > (MIN_Y + PROJECTILE_SPEED)) {
+                    projectiles[i].y -= PROJECTILE_SPEED;
+                } else {
+                    projectiles[i].active = 0;
+                    continue; // Off screen, go to next projectile
+                }
+
+                // 2. Collide with Enemies
+                for (j = 0; j < MAX_ENEMIES; ++j) {
+                     if (enemies[j].active) {
+                         if (check_collision(projectiles[i].x, projectiles[i].y, PROJECTILE_SPRITE_WIDTH, PROJECTILE_SPRITE_HEIGHT,
+                                             enemies[j].x, enemies[j].y, ENEMY_SPRITE_WIDTH, ENEMY_SPRITE_HEIGHT))
+                         {
+                             projectiles[i].active = 0; // Deactivate projectile
+                             enemies[j].active = 0;     // Deactivate enemy
+                             active_enemy_count--;
+                             score++; score_changed = 1;
+                             // Since projectile is now inactive, break inner loop and outer loop will continue to next i
+                             break; // Stop checking this projectile against other enemies
+                         }
+                     }
+                 } // End enemy loop (j)
+            } // End if projectile active
+        } // End projectile loop (i)
+
+
+        // --- Enemy Logic ---
+        frame_count++; // Spawning Timer
+        if ((frame_count >= SPAWN_INTERVAL) && (active_enemy_count < MAX_ENEMIES)) {
+             spawn_enemy(); frame_count = 0;
+        }
+
+        // Enemy Movement & Player Collision
+        for (i = 0; i < MAX_ENEMIES; ++i) {
+            if (enemies[i].active) {
+                // 1. Move
+                if (enemies[i].y < player_y) enemies[i].y++; else if (enemies[i].y > player_y) enemies[i].y--;
+                if (enemies[i].x < player_x) enemies[i].x++; else if (enemies[i].x > player_x) enemies[i].x--;
+
+                // 2. Collide with Player (only if player not invincible)
+                if (player_hit_timer == 0) {
+                     if (check_collision(player_x, player_y, PLAYER_SPRITE_WIDTH, PLAYER_SPRITE_HEIGHT,
+                                         enemies[i].x, enemies[i].y, ENEMY_SPRITE_WIDTH, ENEMY_SPRITE_HEIGHT))
+                    {
+                        player_health--; player_hit_timer = PLAYER_INVINCIBILITY_FRAMES;
+                        // Keep enemy active after hitting player? Or deactivate?
+                        // enemies[i].active = 0; active_enemy_count--; // Uncomment to kill enemy on touch
+
+                        if (player_health == 0) {
+                            game_over_halt(); // Check for Game Over
+                        }
+                        // Don't check collision with other enemies in same frame if player just got hit
+                        // (This is implicitly handled by the hit timer)
+                    }
+                } // End if player not invincible
+            } // End if enemy active
+        } // End enemy loop (i)
 
     } // End while(1)
 
-    // return 0; // Unreachable in NES programming
-}
+} // End main()
