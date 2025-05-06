@@ -1,0 +1,102 @@
+/* Basic Styling & Placeholders */
+body {
+    padding-top: 56px; /* Adjust for fixed navbar height */
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* App Section Styling */
+.app-section {
+    padding-top: 20px;
+    padding-bottom: 40px;
+}
+
+/* Navbar Styling */
+.navbar-brand {
+    font-weight: bold;
+}
+
+/* Shared List Item Styling */
+.list-group-item-action {
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+.list-group-item-action:hover {
+     background-color: rgba(0, 0, 0, 0.05);
+}
+body[data-bs-theme="dark"] .list-group-item-action:hover {
+     background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Action buttons within list items/cards */
+.item-actions {
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    white-space: nowrap; /* Prevent wrapping */
+}
+.list-group-item:hover .item-actions,
+.card:hover .item-actions {
+    opacity: 1;
+}
+/* Smaller buttons for actions */
+.item-actions .btn {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.8rem;
+}
+
+/* Quest Specific */
+.quest-item.completed .quest-name {
+    text-decoration: line-through;
+    color: var(--bs-secondary-color);
+}
+.quest-item .badge {
+    font-size: 0.75em;
+}
+
+/* Character Cards */
+.character-card .card-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Location Item */
+.location-item.discovered .location-name {
+    /* font-style: italic; */
+     color: var(--bs-secondary-color); /* More subtle indication than strikethrough */
+}
+.location-item.discovered::before {
+     content: "\f00c"; /* Font Awesome check mark */
+     font-family: "Font Awesome 6 Free";
+     font-weight: 900;
+     color: var(--bs-success);
+     margin-right: 8px;
+}
+
+
+/* Note Cards */
+.note-card .card-body {
+    max-height: 150px; /* Limit height in list view */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.note-card .card-title {
+     display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Settings modal button spacing */
+#settingsModal .btn {
+    margin-bottom: 5px;
+}
+
+/* Helper for empty states */
+.empty-message {
+     display: none; /* Hidden by default, shown by JS */
+     color: var(--bs-secondary-color);
+}
+
+/* Dashboard card buttons */
+.card .btn[data-section-target] {
+    margin-top: auto; /* Push button to bottom */
+}

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clair Obscur: Expedition 33 Tracker</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-bs-theme="light"> <!-- Add data-bs-theme for potential dark mode toggle -->
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-scroll me-2"></i> COE33 Tracker
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="#" data-section="dashboard"><i class="fas fa-tachometer-alt me-1"></i> Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-section="quests"><i class="fas fa-tasks me-1"></i> Quests</a>
+                    </li>
+                    <li class="nav-item">
+                        <!-- REMOVED disabled class -->
+                        <a class="nav-link" href="#" data-section="characters"><i class="fas fa-users me-1"></i> Characters</a>
+                    </li>
+                    <li class="nav-item">
+                         <!-- REMOVED disabled class -->
+                        <a class="nav-link" href="#" data-section="inventory"><i class="fas fa-box-open me-1"></i> Inventory</a>
+                    </li>
+                    <li class="nav-item">
+                         <!-- REMOVED disabled class -->
+                        <a class="nav-link" href="#" data-section="locations"><i class="fas fa-map-marked-alt me-1"></i> Atlas</a>
+                    </li>
+                    <li class="nav-item">
+                         <!-- REMOVED disabled class -->
+                        <a class="nav-link" href="#" data-section="notes"><i class="fas fa-sticky-note me-1"></i> Notes</a>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                     <button class="btn btn-outline-secondary me-2" id="settingsButton" title="Settings" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                   <!-- Theme toggle button placeholder -->
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="container mt-5 pt-4">
+
+        <!-- Dashboard Section -->
+        <section id="dashboardSection" class="app-section">
+            <h1><i class="fas fa-tachometer-alt me-2"></i> Dashboard</h1>
+            <p class="lead">Welcome to your Clair Obscur: Expedition 33 tracker.</p>
+             <div class="alert alert-info">
+                <i class="fas fa-info-circle me-1"></i> Use the navigation bar to manage different aspects of your expedition. Remember to Export your data frequently!
+            </div>
+             <div class="row">
+                 <div class="col-md-6 col-lg-4 mb-3">
+                     <div class="card h-100">
+                         <div class="card-header"><i class="fas fa-tasks me-1"></i> Quests</div>
+                         <div class="card-body">
+                             <p>Active: <span id="dashboardActiveQuests">0</span></p>
+                             <p>Total: <span id="dashboardTotalQuests">0</span></p>
+                             <button class="btn btn-sm btn-primary" data-section-target="quests"><i class="fas fa-arrow-right me-1"></i> Go to Quests</button>
+                         </div>
+                     </div>
+                 </div>
+                  <div class="col-md-6 col-lg-4 mb-3">
+                     <div class="card h-100">
+                         <div class="card-header"><i class="fas fa-users me-1"></i> Characters</div>
+                         <div class="card-body">
+                              <p>Tracked: <span id="dashboardTotalCharacters">0</span></p>
+                             <!-- Add more character stats later -->
+                              <button class="btn btn-sm btn-primary" data-section-target="characters"><i class="fas fa-arrow-right me-1"></i> Go to Characters</button>
+                         </div>
+                     </div>
+                 </div>
+                   <div class="col-md-6 col-lg-4 mb-3">
+                     <div class="card h-100">
+                         <div class="card-header"><i class="fas fa-box-open me-1"></i> Inventory</div>
+                         <div class="card-body">
+                            <p>Items: <span id="dashboardTotalInventory">0</span></p>
+                            <!-- Add item categories later -->
+                             <button class="btn btn-sm btn-primary" data-section-target="inventory"><i class="fas fa-arrow-right me-1"></i> Go to Inventory</button>
+                         </div>
+                     </div>
+                 </div>
+                  <div class="col-md-6 col-lg-4 mb-3">
+                     <div class="card h-100">
+                         <div class="card-header"><i class="fas fa-map-marked-alt me-1"></i> Atlas</div>
+                         <div class="card-body">
+                            <p>Locations: <span id="dashboardTotalLocations">0</span></p>
+                            <p>Discovered: <span id="dashboardDiscoveredLocations">0</span></p>
+                             <button class="btn btn-sm btn-primary" data-section-target="locations"><i class="fas fa-arrow-right me-1"></i> Go to Atlas</button>
+                         </div>
+                     </div>
+                 </div>
+                  <div class="col-md-6 col-lg-4 mb-3">
+                     <div class="card h-100">
+                         <div class="card-header"><i class="fas fa-sticky-note me-1"></i> Notes</div>
+                         <div class="card-body">
+                             <p>Notes: <span id="dashboardTotalNotes">0</span></p>
+                             <button class="btn btn-sm btn-primary" data-section-target="notes"><i class="fas fa-arrow-right me-1"></i> Go to Notes</button>
+                         </div>
+                     </div>
+                 </div>
+                 <div class="col-md-6 col-lg-4 mb-3">
+                     <div class="card h-100">
+                         <div class="card-header"><i class="fas fa-database me-1"></i> Data Management</div>
+                         <div class="card-body">
+                             <button class="btn btn-sm btn-success mb-2 w-100" id="exportDataBtn"><i class="fas fa-download me-1"></i> Export Data</button>
+                             <button class="btn btn-sm btn-warning w-100" id="importDataBtn"><i class="fas fa-upload me-1"></i> Import Data</button>
+                             <input type="file" id="importFile" accept=".json" style="display: none;">
+                             <small class="text-muted d-block mt-2">Last Export: <span id="lastExportTime">Never</span></small>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+        </section>
+
+        <!-- Quests Section -->
+        <section id="questsSection" class="app-section d-none">
+             <!-- Quest content remains the same as before -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h1><i class="fas fa-tasks me-2"></i> Quests</h1>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#questModal" id="addQuestBtn">
+                    <i class="fas fa-plus me-1"></i> Add Quest
+                </button>
+            </div>
+            <div class="mb-3 d-flex gap-2">
+                <input type="text" id="questSearch" class="form-control" placeholder="Search quests...">
+                 <select id="questFilterStatus" class="form-select w-auto flex-shrink-0">
+                     <option value="all" selected>All Status</option>
+                     <option value="active">Active</option>
+                     <option value="completed">Completed</option>
+                 </select>
+                  <select id="questFilterType" class="form-select w-auto flex-shrink-0">
+                     <option value="all" selected>All Types</option>
+                     <option value="main">Main</option>
+                     <option value="side">Side/Other</option>
+                 </select>
+            </div>
+            <div id="questList" class="list-group">
+                <p class="text-muted text-center mt-3" id="noQuestsMessage">No quests match the current filters.</p>
+            </div>
+        </section>
+
+        <!-- Characters Section -->
+        <section id="charactersSection" class="app-section d-none">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h1><i class="fas fa-users me-2"></i> Characters</h1>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#characterModal" id="addCharacterBtn">
+                    <i class="fas fa-plus me-1"></i> Add Character
+                </button>
+            </div>
+             <input type="text" id="characterSearch" class="form-control mb-3" placeholder="Search characters by name or notes...">
+            <div id="characterList" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                <!-- Character cards will be added here -->
+                 <p class="text-muted text-center mt-3 w-100" id="noCharactersMessage">No characters added yet.</p>
+            </div>
+        </section>
+
+        <!-- Inventory Section -->
+        <section id="inventorySection" class="app-section d-none">
+             <div class="d-flex justify-content-between align-items-center mb-3">
+                <h1><i class="fas fa-box-open me-2"></i> Inventory</h1>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inventoryModal" id="addInventoryBtn">
+                    <i class="fas fa-plus me-1"></i> Add Item
+                </button>
+            </div>
+             <input type="text" id="inventorySearch" class="form-control mb-3" placeholder="Search items by name or description...">
+            <div id="inventoryList" class="list-group">
+                 <!-- Inventory items will be added here -->
+                 <p class="text-muted text-center mt-3" id="noInventoryMessage">No items added yet.</p>
+            </div>
+        </section>
+
+        <!-- Atlas/Locations Section -->
+        <section id="locationsSection" class="app-section d-none">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h1><i class="fas fa-map-marked-alt me-2"></i> Atlas</h1>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#locationModal" id="addLocationBtn">
+                    <i class="fas fa-plus me-1"></i> Add Location
+                </button>
+            </div>
+             <input type="text" id="locationSearch" class="form-control mb-3" placeholder="Search locations by name, region, or notes...">
+            <div id="locationList" class="list-group">
+                 <!-- Location items will be added here -->
+                 <p class="text-muted text-center mt-3" id="noLocationsMessage">No locations added yet.</p>
+            </div>
+        </section>
+
+        <!-- Notes Section -->
+        <section id="notesSection" class="app-section d-none">
+             <div class="d-flex justify-content-between align-items-center mb-3">
+                <h1><i class="fas fa-sticky-note me-2"></i> Notes</h1>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#noteModal" id="addNoteBtn">
+                    <i class="fas fa-plus me-1"></i> Add Note
+                </button>
+            </div>
+             <input type="text" id="noteSearch" class="form-control mb-3" placeholder="Search notes by title or content...">
+            <div id="noteList" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                 <!-- Note cards will be added here -->
+                 <p class="text-muted text-center mt-3 w-100" id="noNotesMessage">No notes added yet.</p>
+            </div>
+        </section>
+
+    </main> <!-- End Main Container -->
+
+    <!-- MODALS START HERE -->
+
+    <!-- Quest Add/Edit Modal (Unchanged from previous version) -->
+    <div class="modal fade" id="questModal" tabindex="-1" aria-labelledby="questModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="questModalLabel">Add New Quest</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="questForm">
+                        <input type="hidden" id="questId">
+                        <div class="mb-3">
+                            <label for="questName" class="form-label">Quest Name*</label>
+                            <input type="text" class="form-control" id="questName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="questDescription" class="form-label">Description / Objectives</label>
+                            <textarea class="form-control" id="questDescription" rows="3"></textarea>
+                        </div>
+                         <div class="mb-3">
+                            <label for="questLocation" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="questLocation" placeholder="e.g., Starting Village, Sunken City">
+                        </div>
+                        <div class="mb-3">
+                            <label for="questGiver" class="form-label">Quest Giver</label>
+                            <input type="text" class="form-control" id="questGiver">
+                        </div>
+                         <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" value="" id="questIsMain">
+                            <label class="form-check-label" for="questIsMain"> Main Story Quest?</label>
+                         </div>
+                          <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" value="" id="questIsCompleted">
+                            <label class="form-check-label" for="questIsCompleted"> Completed?</label>
+                         </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="saveQuestBtn">Save Quest</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Add/Edit Modal -->
+    <div class="modal fade" id="characterModal" tabindex="-1" aria-labelledby="characterModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="characterModalLabel">Add New Character</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="characterForm">
+                        <input type="hidden" id="characterId">
+                        <div class="mb-3">
+                            <label for="characterName" class="form-label">Character Name*</label>
+                            <input type="text" class="form-control" id="characterName" required>
+                        </div>
+                        <!-- Add more fields: Level, Stats, Skills, Equipment links later -->
+                        <div class="mb-3">
+                            <label for="characterNotes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="characterNotes" rows="4"></textarea>
+                        </div>
+                         <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" value="" id="characterIsInParty">
+                            <label class="form-check-label" for="characterIsInParty"> Currently in Party?</label>
+                         </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="saveCharacterBtn">Save Character</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Add/Edit Modal -->
+    <div class="modal fade" id="inventoryModal" tabindex="-1" aria-labelledby="inventoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="inventoryModalLabel">Add New Item</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="inventoryForm">
+                        <input type="hidden" id="inventoryId">
+                        <div class="mb-3">
+                            <label for="inventoryName" class="form-label">Item Name*</label>
+                            <input type="text" class="form-control" id="inventoryName" required>
+                        </div>
+                         <div class="mb-3">
+                            <label for="inventoryQuantity" class="form-label">Quantity</label>
+                            <input type="number" class="form-control" id="inventoryQuantity" value="1" min="0">
+                        </div>
+                         <div class="mb-3">
+                            <label for="inventoryType" class="form-label">Type/Category</label>
+                            <input type="text" class="form-control" id="inventoryType" placeholder="e.g., Weapon, Armor, Consumable, Material, Key Item">
+                        </div>
+                        <div class="mb-3">
+                            <label for="inventoryDescription" class="form-label">Description / Effect</label>
+                            <textarea class="form-control" id="inventoryDescription" rows="3"></textarea>
+                        </div>
+                         <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" value="" id="inventoryIsKeyItem">
+                            <label class="form-check-label" for="inventoryIsKeyItem"> Key Item?</label>
+                         </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="saveInventoryBtn">Save Item</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+     <!-- Location Add/Edit Modal -->
+    <div class="modal fade" id="locationModal" tabindex="-1" aria-labelledby="locationModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="locationModalLabel">Add New Location</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="locationForm">
+                        <input type="hidden" id="locationId">
+                        <div class="mb-3">
+                            <label for="locationName" class="form-label">Location Name*</label>
+                            <input type="text" class="form-control" id="locationName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="locationRegion" class="form-label">Region / Area</label>
+                            <input type="text" class="form-control" id="locationRegion" placeholder="e.g., Whispering Woods, Capital City">
+                        </div>
+                        <div class="mb-3">
+                            <label for="locationNotes" class="form-label">Notes / Points of Interest</label>
+                            <textarea class="form-control" id="locationNotes" rows="3"></textarea>
+                        </div>
+                         <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" value="" id="locationIsDiscovered">
+                            <label class="form-check-label" for="locationIsDiscovered"> Discovered?</label>
+                         </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="saveLocationBtn">Save Location</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Add/Edit Modal -->
+    <div class="modal fade" id="noteModal" tabindex="-1" aria-labelledby="noteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg"> <!-- Larger modal for notes -->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="noteModalLabel">Add New Note</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="noteForm">
+                        <input type="hidden" id="noteId">
+                        <div class="mb-3">
+                            <label for="noteTitle" class="form-label">Title*</label>
+                            <input type="text" class="form-control" id="noteTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="noteContent" class="form-label">Content</label>
+                            <textarea class="form-control" id="noteContent" rows="10"></textarea> <!-- More rows for content -->
+                        </div>
+                         <!-- Add category/tagging later if needed -->
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="saveNoteBtn">Save Note</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal (Unchanged from previous version) -->
+    <div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="settingsModalLabel"><i class="fas fa-cog me-2"></i>Settings</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+             <h6>Data Management</h6>
+             <p>Export your data as a JSON file for backup. Import a previously exported file to restore your data.</p>
+             <button class="btn btn-success me-2 mb-2" id="exportDataBtnSettings"><i class="fas fa-download me-1"></i> Export Data</button>
+             <button class="btn btn-warning mb-2" id="importDataBtnSettings"><i class="fas fa-upload me-1"></i> Import Data</button>
+             <hr>
+             <h6>Danger Zone</h6>
+             <button class="btn btn-danger" id="clearAllDataBtn"><i class="fas fa-exclamation-triangle me-1"></i> Clear All Local Data</button>
+             <small class="text-muted d-block mt-1">This will permanently delete all tracked data from this browser. Use Export first!</small>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODALS END HERE -->
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <!-- UUID Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js"></script>    <!-- Custom JS -->
+    <script src="app.js"></script>
+</body>
+</html>
